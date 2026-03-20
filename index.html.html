@@ -351,7 +351,15 @@ async function switchToBase(eth) {
 async function finalize(eth) {
   await switchToBase(eth);
 
-  provider      = new ethers.providers.Web3Provider(eth, "any");
+  // Pass explicit Base network to prevent ethers from doing ENS lookups
+  // (Base does not support ENS and ethers v5 throws if it tries)
+  const BASE_NETWORK = {
+    chainId: 8453,
+    name: "base",
+    ensAddress: null   // explicitly disable ENS on this network
+  };
+
+  provider      = new ethers.providers.Web3Provider(eth, BASE_NETWORK);
   signer        = provider.getSigner();
   userAddr      = await signer.getAddress();
   tokenContract = new ethers.Contract(TOKEN_ADDR, TOKEN_ABI, signer);
