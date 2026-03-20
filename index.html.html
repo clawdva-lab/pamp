@@ -361,8 +361,8 @@ async function sendTx(toAddr, calldata) {
     data: calldata,
     // Explicit gas limit — bypasses broken gas estimation on some wallets
     gas: toAddr.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
-      ? "0x186a0"   // 100000 gas for USDC approve
-      : "0x30d40",  // 200000 gas for mint
+      ? "0x30d40"   // 200000 gas for USDC approve
+      : "0x7a120",  // 500000 gas for mint (SafeERC20 uses more gas)
   };
   console.log("sendTx →", JSON.stringify(txParams));
   const txHash = await wallet.request({
@@ -493,7 +493,7 @@ async function doMint() {
     toast("Check your wallet…","info");
     const {hash} = await sendTx(TOKEN_ADDR, data);  // data = mint(amount)
     $("s3").className="sdot on";
-    toast(`🎉 ${mintAmt} puMPP minted!`,"success");
+    toast(`🎉 ${(mintAmt*6000).toLocaleString()} PUMPP minted!`,"success");
     flashVal("cntMinted");
     $("txLink").href=`https://basescan.org/tx/${hash}`;
     $("txLink").style.display="block";
