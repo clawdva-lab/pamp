@@ -160,6 +160,10 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
           <div class="cost-val" id="costVal">$0.50</div>
         </div>
       </div>
+      <div style="text-align:center;margin-bottom:14px;font-family:'Syne',sans-serif;">
+        <span style="font-size:11px;color:var(--muted);">YOU RECEIVE</span><br/>
+        <span id="pumppAmt" style="font-size:22px;font-weight:800;color:var(--cyan);">6,000 PUMPP</span>
+      </div>
       <button class="btn btn-approve" id="approveBtn" onclick="approveUSDC()">① Approve USDC</button>
       <button class="btn btn-mint"    id="mintBtn"    onclick="doMint()" style="display:none">② Mint puMPP</button>
       <a class="tx-link" id="txLink" href="#" target="_blank">↗ View on BaseScan</a>
@@ -227,6 +231,9 @@ function changeAmt(d){
   mintAmt=Math.max(1,Math.min(500,mintAmt+d));
   $("amtVal").textContent=mintAmt;
   $("costVal").textContent="$"+(mintAmt*0.5).toFixed(2);
+  // Show how many PUMPP they get (6000 per mint)
+  const pumppEl = document.getElementById("pumppAmt");
+  if(pumppEl) pumppEl.textContent = (mintAmt*6000).toLocaleString()+" PUMPP";
   checkAllowance();
 }
 function numFmt(n){return n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":Math.round(n).toLocaleString()}
@@ -286,20 +293,28 @@ function renderButtons(){
   }
 }
 
-// ── SEND TX (wallet popup → Base RPC for receipt) ─────────────────────────
-async function sendTx(to, data) {
-  // This goes straight to window.ethereum.request — no ethers involved at all
+// ── SEND TX ─────────────────────────────────────────────────────────────────
+async function sendTx(toAddr, calldata) {
+  const txParams = {
+    from: userAddr.toLowerCase(),
+    to:   toAddr.toLowerCase(),
+    data: calldata,
+    // Explicit gas limit — bypasses broken gas estimation on some wallets
+    gas: toAddr.toLowerCase() === "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913"
+      ? "0x186a0"   // 100000 gas for USDC approve
+      : "0x30d40",  // 200000 gas for mint
+  };
+  console.log("sendTx →", JSON.stringify(txParams));
   const txHash = await wallet.request({
     method: "eth_sendTransaction",
-    params: [{ from: userAddr, to: to, data: data }]
+    params: [txParams]
   });
   toast("Confirming on Base…","info");
-  // Poll for receipt via direct RPC
   for(let i=0; i<60; i++) {
     await new Promise(r=>setTimeout(r,2500));
     const receipt = await rpc("eth_getTransactionReceipt",[txHash]);
     if(receipt) {
-      if(receipt.status==="0x0") throw new Error("Transaction reverted");
+      if(receipt.status==="0x0") throw new Error("Transaction reverted on-chain");
       return { hash: txHash, receipt };
     }
   }
@@ -373,12 +388,28 @@ function doDisconnect(){
 async function approveUSDC() {
   try {
     setBtn("approveBtn",true,"Approving…");
-    // Encode with ethers Interface — perfectly correct calldata, no provider
     const amount = ethers.utils.parseUnits((mintAmt*0.5).toFixed(6), 6);
     const data = iUsdc.encodeFunctionData("approve",[TOKEN_ADDR, amount]);
-    console.log("approve calldata:", data); // visible in browser console if needed
+
+    // Debug — shows in browser console (F12)
+    console.log("=== APPROVE TX ===");
+    console.log("from:", userAddr);
+    console.log("to (USDC):", USDC_ADDR);
+    console.log("spender (TOKEN):", TOKEN_ADDR);
+    console.log("amount:", amount.toString());
+    console.log("data:", data);
+    console.log("data length:", data.length, "(should be 138)");
+
+    // Sanity checks
+    if(!TOKEN_ADDR || TOKEN_ADDR.length !== 42 || !TOKEN_ADDR.startsWith("0x")) {
+      throw new Error("TOKEN_ADDR is invalid: " + TOKEN_ADDR);
+    }
+    if(!userAddr || userAddr.length !== 42) {
+      throw new Error("userAddr is invalid: " + userAddr);
+    }
+
     toast("Check your wallet…","info");
-    await sendTx(USDC_ADDR, data);
+    await sendTx(USDC_ADDR, data);  // data = approve(TOKEN_ADDR, amount)
     approved=true; renderButtons();
     toast("USDC approved! Now mint.","success");
     $("s2").className="sdot on";
@@ -400,7 +431,7 @@ async function doMint() {
     const data = iToken.encodeFunctionData("mint",[ethers.BigNumber.from(mintAmt)]);
     console.log("mint calldata:", data);
     toast("Check your wallet…","info");
-    const {hash} = await sendTx(TOKEN_ADDR, data);
+    const {hash} = await sendTx(TOKEN_ADDR, data);  // data = mint(amount)
     $("s3").className="sdot on";
     toast(`🎉 ${mintAmt} puMPP minted!`,"success");
     flashVal("cntMinted");
@@ -421,6 +452,8 @@ async function doMint() {
 // ── BOOT ──────────────────────────────────────────────────────────────────
 $("amtVal").textContent  = mintAmt;
 $("costVal").textContent = "$"+(mintAmt*0.5).toFixed(2);
+const pumppEl = document.getElementById("pumppAmt");
+if(pumppEl) pumppEl.textContent = (mintAmt*6000).toLocaleString()+" PUMPP";
 
 // Silent reconnect if already authorised
 window.addEventListener("load", async () => {
