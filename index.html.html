@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>puMPP — Mint on Base</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#010d1f;--panel:rgba(2,20,46,0.90);
+  --blue:#0af;--bluedim:#0066aa;--cyan:#00f0ff;--ice:#b8f0ff;
+  --border:rgba(0,180,255,0.18);--muted:#3d6e91;
+  --success:#00ffbb;--error:#ff3b6b;--r:16px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-height:100vh;overflow-x:hidden}
+
+.bg-wrap{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+.bg-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(0,170,255,.038) 1px,transparent 1px),linear-gradient(90deg,rgba(0,170,255,.038) 1px,transparent 1px);background-size:52px 52px;animation:grid-move 25s linear infinite}
+@keyframes grid-move{to{background-position:52px 52px}}
+.bg-top{position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:900px;height:500px;background:radial-gradient(ellipse at 50% 0%,rgba(0,140,255,.2) 0%,transparent 68%)}
+.bg-o1{position:absolute;bottom:-60px;left:-120px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(0,60,180,.14) 0%,transparent 65%);animation:orb 14s ease-in-out infinite alternate}
+.bg-o2{position:absolute;top:30%;right:-80px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(0,180,255,.11) 0%,transparent 65%);animation:orb 10s ease-in-out infinite alternate-reverse}
+@keyframes orb{from{transform:translateY(0)}to{transform:translateY(-50px)}}
+.scanline{position:fixed;inset:0;z-index:1;pointer-events:none;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.04) 2px,rgba(0,0,0,.04) 4px)}
+
+.wrap{position:relative;z-index:2;max-width:500px;margin:0 auto;padding:40px 20px 90px}
+
+.header{text-align:center;margin-bottom:36px}
+.logo{display:inline-flex;align-items:center;justify-content:center;width:86px;height:86px;border-radius:50%;border:1.5px solid var(--blue);box-shadow:0 0 0 6px rgba(0,170,255,.06),0 0 36px rgba(0,170,255,.4);margin-bottom:20px;position:relative;animation:logo-pulse 3s ease-in-out infinite}
+@keyframes logo-pulse{0%,100%{box-shadow:0 0 0 6px rgba(0,170,255,.06),0 0 28px rgba(0,170,255,.35)}50%{box-shadow:0 0 0 10px rgba(0,170,255,.08),0 0 52px rgba(0,200,255,.55)}}
+.logo-inner{font-size:34px;line-height:1}
+.logo::after{content:'';position:absolute;inset:-10px;border-radius:50%;border:1px dashed rgba(0,170,255,.2);animation:spin-ring 12s linear infinite}
+@keyframes spin-ring{to{transform:rotate(360deg)}}
+.brand{font-family:'Syne',sans-serif;font-size:clamp(36px,9vw,54px);font-weight:900;line-height:1;background:linear-gradient(135deg,#fff 20%,var(--cyan) 70%,var(--blue) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
+.tagline{font-size:11px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase}
+
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);backdrop-filter:blur(20px);margin-bottom:14px;position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--blue),transparent);opacity:.55}
+.card-body{padding:24px}
+.sec-label{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);margin-bottom:18px;display:flex;align-items:center;gap:8px}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--bluedim),transparent)}
+
+/* LIVE BAR */
+.bar-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
+.bar-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--blue)}
+.live-badge{display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--success);letter-spacing:.1em}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);animation:blink 1.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+.seg-track{height:16px;background:rgba(0,170,255,.07);border-radius:99px;overflow:hidden;border:1px solid rgba(0,170,255,.13);margin-bottom:10px}
+.seg-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,#0055cc,#00aaff,#00f0ff);box-shadow:0 0 16px rgba(0,200,255,.55);transition:width .9s cubic-bezier(.4,0,.2,1);width:0%;position:relative}
+.seg-fill::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent 70%,rgba(255,255,255,.2) 85%,transparent 100%);animation:sheen 2.2s ease-in-out infinite}
+@keyframes sheen{0%{transform:translateX(-100%)}100%{transform:translateX(400%)}}
+.seg-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:16px}
+.seg-pct{font-family:'Syne',sans-serif;font-size:10px;font-weight:700;color:var(--cyan)}
+.counters{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.counter{background:rgba(0,170,255,.05);border:1px solid rgba(0,170,255,.09);border-radius:10px;padding:12px 8px;text-align:center}
+.counter-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;color:#fff;margin-bottom:3px;transition:color .4s}
+.counter-val.flash{color:var(--cyan)}
+.counter-key{font-size:9px;color:var(--muted);letter-spacing:.06em;line-height:1.4}
+
+/* CONNECT SCREEN */
+.connect-screen{text-align:center;padding:10px 0 4px}
+.connect-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:#fff;margin-bottom:8px}
+.connect-sub{font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:24px}
+
+.btn-connect-main{
+  width:100%;height:58px;border:none;border-radius:13px;cursor:pointer;
+  font-family:'Syne',sans-serif;font-size:15px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+  background:linear-gradient(135deg,#00aaff,#00f0ff);
+  color:#00070f;
+  box-shadow:0 4px 28px rgba(0,200,255,.45);
+  transition:transform .18s,box-shadow .18s;
+  position:relative;overflow:hidden;
+  margin-bottom:12px;
+}
+.btn-connect-main:hover{transform:translateY(-2px);box-shadow:0 6px 40px rgba(0,220,255,.6)}
+.btn-connect-main:active{transform:translateY(0)}
+.btn-connect-main::after{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.25),transparent);animation:btn-sheen 2s ease-in-out infinite}
+@keyframes btn-sheen{to{left:140%}}
+
+.no-wallet-hint{font-size:10px;color:var(--muted);line-height:1.8}
+.no-wallet-hint a{color:var(--blue);text-decoration:none}.no-wallet-hint a:hover{color:var(--cyan)}
+
+/* WALLET PILL */
+.wallet-pill{display:none;align-items:center;gap:10px;background:var(--panel);border:1px solid var(--border);border-radius:99px;padding:10px 18px;margin-bottom:14px;backdrop-filter:blur(18px)}
+.wallet-pill.show{display:flex}
+.w-dot{width:9px;height:9px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:blink 2s ease-in-out infinite;flex-shrink:0}
+.w-addr{font-size:12px;color:var(--ice);flex:1}
+.w-net{font-size:10px;color:var(--muted)}
+.w-disc{font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;padding:2px 8px;border-radius:4px;font-family:'Space Mono',monospace;transition:color .15s}
+.w-disc:hover{color:var(--error)}
+
+/* STEPPER */
+.stepper-row{display:flex;gap:12px;align-items:stretch;margin-bottom:18px}
+.stepper{flex:1;display:flex;align-items:center;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.s-btn{background:none;border:none;cursor:pointer;color:var(--blue);font-size:22px;font-weight:700;padding:0 20px;height:56px;transition:background .15s,color .15s;font-family:'Syne',sans-serif}
+.s-btn:hover{background:rgba(0,170,255,.1);color:var(--cyan)}
+.s-val{flex:1;text-align:center;font-family:'Syne',sans-serif;font-size:26px;font-weight:900;color:#fff}
+.cost-pill{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(0,80,180,.28),rgba(0,30,90,.2));border:1px solid rgba(0,170,255,.22);border-radius:12px;min-width:100px;padding:8px 16px;gap:3px}
+.cost-label{font-size:9px;color:var(--muted);letter-spacing:.1em}
+.cost-val{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--cyan)}
+.steps{display:flex;gap:6px;margin-bottom:18px}
+.sdot{flex:1;height:3px;border-radius:99px;background:rgba(0,170,255,.1);transition:background .4s}
+.sdot.on{background:linear-gradient(90deg,var(--blue),var(--cyan));box-shadow:0 0 8px rgba(0,200,255,.5)}
+
+.btn{width:100%;height:52px;border:none;border-radius:11px;cursor:pointer;position:relative;overflow:hidden;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;transition:transform .18s,box-shadow .18s}
+.btn:disabled{opacity:.38;cursor:not-allowed;transform:none!important}
+.btn-approve{background:linear-gradient(135deg,#003d7a,#0070cc);color:var(--cyan);border:1px solid rgba(0,150,255,.3);margin-bottom:10px}
+.btn-approve:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 4px 20px rgba(0,120,255,.4)}
+.btn-mint{background:linear-gradient(135deg,#00aaff,#00f0ff);color:#00070f;box-shadow:0 4px 22px rgba(0,200,255,.38)}
+.btn-mint:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 6px 34px rgba(0,220,255,.55)}
+.btn::after{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:btn-sheen 2.4s ease-in-out infinite}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin-r .65s linear infinite;vertical-align:middle;margin-right:7px}
+@keyframes spin-r{to{transform:rotate(360deg)}}
+
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(0,170,255,.06);font-size:12px}
+.info-row:last-child{border:none}
+.info-row .k{color:var(--muted)}.info-row .v{color:var(--ice);font-size:11px}
+.info-row .v a{color:var(--blue);text-decoration:none}.info-row .v a:hover{color:var(--cyan)}
+.tx-link{display:none;text-align:center;margin-top:14px;font-size:11px;color:var(--blue);text-decoration:none;letter-spacing:.06em}
+.tx-link:hover{color:var(--cyan);text-decoration:underline}
+
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:rgba(2,18,42,.97);border:1px solid var(--border);backdrop-filter:blur(20px);border-radius:12px;padding:13px 22px;font-size:13px;display:flex;align-items:center;gap:9px;transition:transform .32s cubic-bezier(.34,1.56,.64,1),opacity .28s;opacity:0;z-index:999;max-width:400px;text-align:center;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+.toast.success{border-color:rgba(0,255,187,.3)}.toast.error{border-color:rgba(255,59,107,.35)}.toast.info{border-color:rgba(0,170,255,.3)}
+</style>
+</head>
+<body>
+
+<div class="bg-wrap"><div class="bg-grid"></div><div class="bg-top"></div><div class="bg-o1"></div><div class="bg-o2"></div></div>
+<div class="scanline"></div>
+
+<div class="wrap">
+
+  <div class="header">
+    <div class="logo"><div class="logo-inner">⬡</div></div>
+    <div class="brand">puMPP</div>
+    <div class="tagline">Base Network · 0.50 USDC per token</div>
+  </div>
+
+  <!-- LIVE MINT BAR -->
+  <div class="card">
+    <div class="card-body">
+      <div class="bar-header">
+        <div class="bar-title">Live Mint Progress</div>
+        <div class="live-badge"><div class="live-dot"></div>LIVE</div>
+      </div>
+      <div class="seg-track"><div class="seg-fill" id="progressFill"></div></div>
+      <div class="seg-labels"><span>0</span><span class="seg-pct" id="pctLabel">0%</span><span>60M</span></div>
+      <div class="counters">
+        <div class="counter"><div class="counter-val" id="cntMinted">0</div><div class="counter-key">Already<br>Minted</div></div>
+        <div class="counter"><div class="counter-val" id="cntMinting" style="color:var(--cyan)">—</div><div class="counter-key">Currently<br>Minting</div></div>
+        <div class="counter"><div class="counter-val" id="cntLeft">60M</div><div class="counter-key">Remaining<br>Supply</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECT CARD — shown when not connected -->
+  <div class="card" id="connectCard">
+    <div class="card-body connect-screen">
+      <div class="connect-title">Connect Your Wallet</div>
+      <div class="connect-sub">
+        Works with MetaMask, Coinbase Wallet, Rabby,<br>
+        Brave, Trust, OKX, Phantom and any EVM wallet.
+      </div>
+      <button class="btn-connect-main" id="connectBtn" onclick="connectWallet()">
+        ⬡ &nbsp;Connect Wallet
+      </button>
+      <div class="no-wallet-hint">
+        Don't have a wallet?
+        <a href="https://metamask.io/download/" target="_blank">Download MetaMask free →</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- WALLET PILL — shown when connected -->
+  <div class="wallet-pill" id="walletPill">
+    <div class="w-dot"></div>
+    <div class="w-addr" id="wAddr">—</div>
+    <div class="w-net">Base Mainnet</div>
+    <button class="w-disc" onclick="doDisconnect()">✕ Disconnect</button>
+  </div>
+
+  <!-- MINT FORM — shown when connected -->
+  <div class="card" id="mintCard" style="display:none">
+    <div class="card-body">
+      <div class="sec-label">Mint puMPP</div>
+      <div class="steps">
+        <div class="sdot on" id="s1"></div>
+        <div class="sdot" id="s2"></div>
+        <div class="sdot" id="s3"></div>
+      </div>
+      <div class="stepper-row">
+        <div class="stepper">
+          <button class="s-btn" onclick="changeAmt(-1)">−</button>
+          <div class="s-val" id="amtVal">1</div>
+          <button class="s-btn" onclick="changeAmt(1)">+</button>
+        </div>
+        <div class="cost-pill">
+          <div class="cost-label">USDC COST</div>
+          <div class="cost-val" id="costVal">$0.50</div>
+        </div>
+      </div>
+      <button class="btn btn-approve" id="approveBtn" onclick="approveUSDC()">① Approve USDC</button>
+      <button class="btn btn-mint"    id="mintBtn"    onclick="doMint()" style="display:none">② Mint puMPP</button>
+      <a class="tx-link" id="txLink" href="#" target="_blank">↗ View on BaseScan</a>
+    </div>
+  </div>
+
+  <!-- CONTRACT INFO -->
+  <div class="card">
+    <div class="card-body">
+      <div class="sec-label">Contract Info</div>
+      <div class="info-row"><span class="k">Token</span><span class="v">puMPP (PUMPP)</span></div>
+      <div class="info-row"><span class="k">Network</span><span class="v">Base Mainnet · 8453</span></div>
+      <div class="info-row"><span class="k">Mint Price</span><span class="v">0.50 USDC / token</span></div>
+      <div class="info-row"><span class="k">Total Cap</span><span class="v">100,000,000</span></div>
+      <div class="info-row"><span class="k">Public Mint</span><span class="v">60,000,000</span></div>
+      <div class="info-row"><span class="k">USDC</span><span class="v"><a href="https://basescan.org/address/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" target="_blank">0x8335…A02913</a></span></div>
+      <div class="info-row"><span class="k">Contract</span><span class="v" id="contractDisplay">—</span></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"><span id="toastIcon"></span>&nbsp;<span id="toastMsg"></span></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+<script>
+
+// ─── CONFIG ───────────────────────────────────────────────────────────────
+const TOKEN_ADDR = "DEPLOY_YOUR_TOKEN_ADDRESS_HERE";
+const USDC_ADDR  = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const BASE_CHAIN = 8453;
+const MINTABLE   = 60_000_000;
+
+const TOKEN_ABI = [
+  "function mint(uint256 amount) external",
+  "function publicMinted() view returns (uint256)",
+  "function publicMintableRemaining() view returns (uint256)",
+  "function mintingPaused() view returns (bool)"
+];
+const USDC_ABI = [
+  "function approve(address,uint256) returns (bool)",
+  "function allowance(address,address) view returns (uint256)"
+];
+
+// ─── STATE ────────────────────────────────────────────────────────────────
+let provider, signer, tokenContract, usdcContract, userAddr;
+let mintAmt = 1, approved = false, prevMinted = 0;
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function toast(msg, type = "success") {
+  const t = $("toast");
+  $("toastIcon").textContent = type === "success" ? "✓" : type === "error" ? "✕" : "⟳";
+  $("toastMsg").textContent = msg;
+  t.className = `toast ${type} show`;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = `toast ${type}`, 4500);
+}
+
+function setBtn(id, loading, label) {
+  const b = $(id); if (!b) return;
+  b.disabled = loading;
+  b.innerHTML = loading ? `<span class="spinner"></span>${label}` : label;
+}
+
+function changeAmt(d) {
+  mintAmt = Math.max(1, Math.min(500, mintAmt + d));
+  $("amtVal").textContent = mintAmt;
+  $("costVal").textContent = "$" + (mintAmt * 0.5).toFixed(2);
+  checkAllowance();
+}
+
+function numFmt(n) {
+  return n >= 1e6 ? (n/1e6).toFixed(2)+"M" : n >= 1e3 ? (n/1e3).toFixed(1)+"K" : Math.round(n).toLocaleString();
+}
+
+function flashVal(id) {
+  const el = $(id); el.classList.add("flash"); setTimeout(() => el.classList.remove("flash"), 700);
+}
+
+// ─── BAR ──────────────────────────────────────────────────────────────────
+function updateBar(minted, minting = 0) {
+  const pct = Math.min(100, (minted / MINTABLE) * 100);
+  $("progressFill").style.width = pct + "%";
+  $("pctLabel").textContent = pct.toFixed(1) + "%";
+  $("cntMinted").textContent = numFmt(minted);
+  $("cntMinting").textContent = minting > 0 ? "+" + numFmt(minting) : "—";
+  $("cntLeft").textContent = numFmt(Math.max(0, MINTABLE - minted));
+}
+
+async function loadStats() {
+  if (!tokenContract) return;
+  try {
+    const m = await tokenContract.publicMinted();
+    const n = parseFloat(ethers.utils.formatUnits(m, 18));
+    prevMinted = n; updateBar(n, 0);
+  } catch(_) {}
+}
+
+// ─── ALLOWANCE ────────────────────────────────────────────────────────────
+async function checkAllowance() {
+  if (!usdcContract || !userAddr || TOKEN_ADDR.includes("DEPLOY")) return;
+  try {
+    const needed = ethers.utils.parseUnits((mintAmt * 0.5).toFixed(6), 6);
+    approved = (await usdcContract.allowance(userAddr, TOKEN_ADDR)).gte(needed);
+    renderButtons();
+  } catch(_) {}
+}
+
+function renderButtons() {
+  if (approved) {
+    $("approveBtn").style.display = "none"; $("mintBtn").style.display = "block";
+    $("s1").className = "sdot on"; $("s2").className = "sdot on"; $("s3").className = "sdot";
+  } else {
+    $("approveBtn").style.display = "block"; $("mintBtn").style.display = "none";
+    $("s1").className = "sdot on"; $("s2").className = "sdot"; $("s3").className = "sdot";
+  }
+}
+
+// ─── SWITCH TO BASE ───────────────────────────────────────────────────────
+async function switchToBase(eth) {
+  try {
+    await eth.request({
+      method: "wallet_switchEthereumChain",
+      params: [{ chainId: "0x2105" }]
+    });
+  } catch(e) {
+    // 4902 = chain not added yet
+    if (e.code === 4902 || e.code === -32603) {
+      await eth.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: "0x2105",
+          chainName: "Base",
+          nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+          rpcUrls: ["https://mainnet.base.org"],
+          blockExplorerUrls: ["https://basescan.org"]
+        }]
+      });
+    }
+    // If already on Base, ignore the error
+  }
+}
+
+// ─── FINALIZE ─────────────────────────────────────────────────────────────
+async function finalize(eth) {
+  await switchToBase(eth);
+
+  provider      = new ethers.providers.Web3Provider(eth, "any");
+  signer        = provider.getSigner();
+  userAddr      = await signer.getAddress();
+  tokenContract = new ethers.Contract(TOKEN_ADDR, TOKEN_ABI, signer);
+  usdcContract  = new ethers.Contract(USDC_ADDR,  USDC_ABI,  signer);
+
+  // Show connected state
+  $("wAddr").textContent = userAddr.slice(0,6) + "…" + userAddr.slice(-4);
+  $("walletPill").classList.add("show");
+  $("connectCard").style.display = "none";
+  $("mintCard").style.display    = "block";
+
+  if (!TOKEN_ADDR.includes("DEPLOY")) {
+    $("contractDisplay").innerHTML =
+      `<a href="https://basescan.org/address/${TOKEN_ADDR}" target="_blank">${TOKEN_ADDR.slice(0,6)}…${TOKEN_ADDR.slice(-4)}</a>`;
+  }
+
+  await loadStats();
+  await checkAllowance();
+  setInterval(loadStats, 10_000);
+
+  // Reload on account/chain change
+  eth.on?.("accountsChanged", () => location.reload());
+  eth.on?.("chainChanged",    () => location.reload());
+}
+
+// ─── DISCONNECT ───────────────────────────────────────────────────────────
+function doDisconnect() {
+  provider = signer = tokenContract = usdcContract = userAddr = null;
+  approved = false;
+  $("walletPill").classList.remove("show");
+  $("mintCard").style.display   = "none";
+  $("connectCard").style.display = "block";
+  toast("Disconnected", "info");
+}
+
+// ─── THE ONLY CONNECT FUNCTION — dead simple ──────────────────────────────
+// Uses whatever wallet injected itself as window.ethereum.
+// No sniffing, no redirects. Works with every EVM wallet.
+async function connectWallet() {
+  setBtn("connectBtn", true, "Connecting…");
+  try {
+    // Give the extension up to 1s to inject if it hasn't yet
+    if (!window.ethereum) {
+      await new Promise(r => setTimeout(r, 1000));
+    }
+
+    const eth = window.ethereum;
+
+    if (!eth) {
+      // Genuinely no wallet at all
+      toast("No wallet found. Please install MetaMask or another EVM wallet.", "error");
+      setBtn("connectBtn", false, "⬡ &nbsp;Connect Wallet");
+      return;
+    }
+
+    // Ask for accounts — this triggers the wallet popup
+    await eth.request({ method: "eth_requestAccounts" });
+    await finalize(eth);
+    toast("Wallet connected!", "success");
+
+  } catch(e) {
+    if (e.code === 4001) {
+      toast("Connection rejected. Please try again.", "info");
+    } else {
+      toast("Error: " + (e.message || "Unknown error"), "error");
+    }
+    setBtn("connectBtn", false, "⬡ &nbsp;Connect Wallet");
+  }
+}
+
+// ─── APPROVE USDC ─────────────────────────────────────────────────────────
+async function approveUSDC() {
+  try {
+    setBtn("approveBtn", true, "Approving…");
+    const needed = ethers.utils.parseUnits((mintAmt * 0.5).toFixed(6), 6);
+    const tx = await usdcContract.approve(TOKEN_ADDR, needed);
+    toast("Approval submitted…", "info");
+    await tx.wait();
+    approved = true; renderButtons();
+    toast("USDC approved! Now mint.", "success");
+    $("s2").className = "sdot on";
+  } catch(e) {
+    toast(e.reason || e.message || "Approval failed", "error");
+  } finally {
+    setBtn("approveBtn", false, "① Approve USDC");
+  }
+}
+
+// ─── MINT ─────────────────────────────────────────────────────────────────
+async function doMint() {
+  try {
+    setBtn("mintBtn", true, "Minting…");
+    $("txLink").style.display = "none";
+    updateBar(prevMinted, mintAmt);
+    const tx = await tokenContract.mint(mintAmt);
+    toast("TX sent — confirming…", "info");
+    const rc = await tx.wait();
+    $("s3").className = "sdot on";
+    toast(`🎉 ${mintAmt} puMPP minted!`, "success");
+    flashVal("cntMinted");
+    const lnk = $("txLink");
+    lnk.href = `https://basescan.org/tx/${rc.transactionHash}`;
+    lnk.style.display = "block";
+    approved = false; renderButtons();
+    await loadStats();
+  } catch(e) {
+    toast(e.reason || e.message || "Mint failed", "error");
+    await loadStats();
+  } finally {
+    setBtn("mintBtn", false, "② Mint puMPP");
+  }
+}
+
+// ─── BOOT ─────────────────────────────────────────────────────────────────
+$("amtVal").textContent  = mintAmt;
+$("costVal").textContent = "$" + (mintAmt * 0.5).toFixed(2);
+
+// Silent reconnect on return visits — no popup, no button click needed
+window.addEventListener("load", async () => {
+  await new Promise(r => setTimeout(r, 500)); // wait for extension injection
+  const eth = window.ethereum;
+  if (!eth) return; // no wallet installed, show connect button
+  try {
+    // listAccounts() does NOT trigger a popup — safe to call silently
+    const accounts = await eth.request({ method: "eth_accounts" });
+    if (accounts && accounts.length > 0) {
+      await finalize(eth);
+      toast("Wallet reconnected", "success");
+    }
+  } catch(_) {
+    // Silent fail — just show the connect button
+  }
+});
+</script>
+</body>
+</html>
