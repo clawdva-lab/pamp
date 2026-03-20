@@ -111,7 +111,6 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
     <div class="tagline">Base Network · 0.50 USDC per token</div>
   </div>
 
-  <!-- LIVE BAR -->
   <div class="card">
     <div class="card-body">
       <div class="bar-header">
@@ -128,7 +127,6 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
     </div>
   </div>
 
-  <!-- CONNECT -->
   <div class="card" id="connectCard">
     <div class="card-body connect-screen">
       <div class="connect-title">Connect Your Wallet</div>
@@ -138,7 +136,6 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
     </div>
   </div>
 
-  <!-- WALLET PILL -->
   <div class="wallet-pill" id="walletPill">
     <div class="w-dot"></div>
     <div class="w-addr" id="wAddr">—</div>
@@ -146,7 +143,6 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
     <button class="w-disc" onclick="doDisconnect()">✕ Disconnect</button>
   </div>
 
-  <!-- MINT FORM -->
   <div class="card" id="mintCard" style="display:none">
     <div class="card-body">
       <div class="sec-label">Mint puMPP</div>
@@ -170,7 +166,6 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
     </div>
   </div>
 
-  <!-- INFO -->
   <div class="card">
     <div class="card-body">
       <div class="sec-label">Contract Info</div>
@@ -187,305 +182,260 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
 
 <div class="toast" id="toast"><span id="toastIcon"></span>&nbsp;<span id="toastMsg"></span></div>
 
-<!-- ethers v5 -->
+<!-- ethers v5 — used ONLY for Interface.encodeFunctionData and BigNumber. No provider created. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 <script>
-// ─── CONFIG ───────────────────────────────────────────────────────────────
-const TOKEN_ADDR = "0xe68eca6825d3b07997eD79F13911c96833Aa35F8"; // ← paste your contract address here
+// ════════════════════════════════════════════════════════════
+//  CONFIG  ← paste your deployed contract address here
+// ════════════════════════════════════════════════════════════
+const TOKEN_ADDR = "0xe68eca6825d3b07997eD79F13911c96833Aa35F8";
 const USDC_ADDR  = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const BASE_RPC   = "https://mainnet.base.org";
 const MINTABLE   = 60_000_000;
 
-const TOKEN_ABI = [
+// ── ABI interfaces — used ONLY for encoding calldata, no provider ─────────
+const iToken = new ethers.utils.Interface([
   "function mint(uint256 amount) external",
-  "function publicMinted() view returns (uint256)",
-  "function mintingPaused() view returns (bool)"
-];
-const USDC_ABI = [
+  "function publicMinted() view returns (uint256)"
+]);
+const iUsdc = new ethers.utils.Interface([
   "function approve(address spender, uint256 amount) external returns (bool)",
   "function allowance(address owner, address spender) external view returns (uint256)"
-];
+]);
 
-// ─── STATE ────────────────────────────────────────────────────────────────
-let provider, signer, tokenContract, usdcContract, userAddr;
+// ── STATE ─────────────────────────────────────────────────────────────────
+let wallet = null;   // window.ethereum
+let userAddr = null;
 let mintAmt = 1, approved = false, prevMinted = 0;
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────
+// ── DOM ───────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
 function toast(msg, type="success") {
   const t=$("toast");
   $("toastIcon").textContent = type==="success"?"✓":type==="error"?"✕":"⟳";
   $("toastMsg").textContent = msg;
-  t.className = `toast ${type} show`;
-  clearTimeout(t._t);
-  t._t = setTimeout(()=>t.className=`toast ${type}`, 4500);
+  t.className=`toast ${type} show`;
+  clearTimeout(t._t); t._t=setTimeout(()=>t.className=`toast ${type}`,4500);
 }
-
-function setBtn(id, loading, label) {
-  const b=$(id); if(!b) return;
-  b.disabled = loading;
-  b.innerHTML = loading ? `<span class="spinner"></span>${label}` : label;
+function setBtn(id,loading,label){
+  const b=$(id);if(!b)return;
+  b.disabled=loading;
+  b.innerHTML=loading?`<span class="spinner"></span>${label}`:label;
 }
-
-function changeAmt(d) {
-  mintAmt = Math.max(1, Math.min(500, mintAmt+d));
-  $("amtVal").textContent = mintAmt;
-  $("costVal").textContent = "$"+(mintAmt*0.5).toFixed(2);
+function changeAmt(d){
+  mintAmt=Math.max(1,Math.min(500,mintAmt+d));
+  $("amtVal").textContent=mintAmt;
+  $("costVal").textContent="$"+(mintAmt*0.5).toFixed(2);
   checkAllowance();
 }
+function numFmt(n){return n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":Math.round(n).toLocaleString()}
+function flashVal(id){const el=$(id);el.classList.add("flash");setTimeout(()=>el.classList.remove("flash"),700)}
 
-function numFmt(n) {
-  return n>=1e6?(n/1e6).toFixed(2)+"M":n>=1e3?(n/1e3).toFixed(1)+"K":Math.round(n).toLocaleString();
+// ── DIRECT RPC (fetch → Base RPC, no ethers provider, no ENS) ────────────
+let _rpcId = 1;
+async function rpc(method, params=[]) {
+  const r = await fetch(BASE_RPC, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({jsonrpc:"2.0",id:_rpcId++,method,params})
+  });
+  const d = await r.json();
+  if(d.error) throw new Error(d.error.message);
+  return d.result;
 }
 
-function flashVal(id) {
-  const el=$(id); el.classList.add("flash"); setTimeout(()=>el.classList.remove("flash"),700);
-}
-
-// ─── BAR ──────────────────────────────────────────────────────────────────
-function updateBar(minted, minting=0) {
-  const pct = Math.min(100,(minted/MINTABLE)*100);
-  $("progressFill").style.width = pct+"%";
-  $("pctLabel").textContent = pct.toFixed(1)+"%";
-  $("cntMinted").textContent = numFmt(minted);
-  $("cntMinting").textContent = minting>0?"+"+numFmt(minting):"—";
-  $("cntLeft").textContent = numFmt(Math.max(0,MINTABLE-minted));
-}
-
+// ── LIVE BAR ──────────────────────────────────────────────────────────────
 async function loadStats() {
-  if(!tokenContract) return;
   try {
-    const m = await tokenContract.publicMinted();
-    const n = parseFloat(ethers.utils.formatUnits(m, 18));
-    prevMinted = n; updateBar(n, 0);
-  } catch(_) {}
+    // Encode publicMinted() call
+    const data = iToken.encodeFunctionData("publicMinted",[]);
+    const result = await rpc("eth_call",[{to:TOKEN_ADDR,data},"latest"]);
+    const [minted] = iToken.decodeFunctionResult("publicMinted", result);
+    const n = parseFloat(ethers.utils.formatUnits(minted, 18));
+    prevMinted = n;
+    const pct = Math.min(100,(n/MINTABLE)*100);
+    $("progressFill").style.width=pct+"%";
+    $("pctLabel").textContent=pct.toFixed(1)+"%";
+    $("cntMinted").textContent=numFmt(n);
+    $("cntMinting").textContent="—";
+    $("cntLeft").textContent=numFmt(Math.max(0,MINTABLE-n));
+  } catch(_){}
 }
 
-// ─── ALLOWANCE ────────────────────────────────────────────────────────────
+// ── ALLOWANCE ─────────────────────────────────────────────────────────────
 async function checkAllowance() {
-  if(!usdcContract || !userAddr || TOKEN_ADDR.includes("DEPLOY")) return;
+  if(!userAddr || TOKEN_ADDR.includes("DEPLOY")) return;
   try {
+    const data = iUsdc.encodeFunctionData("allowance",[userAddr, TOKEN_ADDR]);
+    const result = await rpc("eth_call",[{to:USDC_ADDR,data},"latest"]);
+    const [al] = iUsdc.decodeFunctionResult("allowance", result);
     const needed = ethers.utils.parseUnits((mintAmt*0.5).toFixed(6), 6);
-    const al = await usdcContract.allowance(userAddr, TOKEN_ADDR);
     approved = al.gte(needed);
     renderButtons();
-  } catch(_) {}
+  } catch(_){}
 }
 
-function renderButtons() {
-  if(approved) {
+function renderButtons(){
+  if(approved){
     $("approveBtn").style.display="none"; $("mintBtn").style.display="block";
-    $("s1").className="sdot on"; $("s2").className="sdot on"; $("s3").className="sdot";
-  } else {
+    $("s1").className="sdot on";$("s2").className="sdot on";$("s3").className="sdot";
+  }else{
     $("approveBtn").style.display="block"; $("mintBtn").style.display="none";
-    $("s1").className="sdot on"; $("s2").className="sdot"; $("s3").className="sdot";
+    $("s1").className="sdot on";$("s2").className="sdot";$("s3").className="sdot";
   }
 }
 
-// ─── SWITCH TO BASE ───────────────────────────────────────────────────────
-async function switchToBase(eth) {
+// ── SEND TX (wallet popup → Base RPC for receipt) ─────────────────────────
+async function sendTx(to, data) {
+  // This goes straight to window.ethereum.request — no ethers involved at all
+  const txHash = await wallet.request({
+    method: "eth_sendTransaction",
+    params: [{ from: userAddr, to: to, data: data }]
+  });
+  toast("Confirming on Base…","info");
+  // Poll for receipt via direct RPC
+  for(let i=0; i<60; i++) {
+    await new Promise(r=>setTimeout(r,2500));
+    const receipt = await rpc("eth_getTransactionReceipt",[txHash]);
+    if(receipt) {
+      if(receipt.status==="0x0") throw new Error("Transaction reverted");
+      return { hash: txHash, receipt };
+    }
+  }
+  throw new Error("Transaction timed out");
+}
+
+// ── SWITCH TO BASE ────────────────────────────────────────────────────────
+async function switchToBase() {
   try {
-    await eth.request({method:"wallet_switchEthereumChain", params:[{chainId:"0x2105"}]});
+    await wallet.request({method:"wallet_switchEthereumChain",params:[{chainId:"0x2105"}]});
   } catch(e) {
     if(e.code===4902||e.code===-32603) {
-      await eth.request({method:"wallet_addEthereumChain", params:[{
-        chainId:"0x2105", chainName:"Base",
+      await wallet.request({method:"wallet_addEthereumChain",params:[{
+        chainId:"0x2105",chainName:"Base",
         nativeCurrency:{name:"Ether",symbol:"ETH",decimals:18},
-        rpcUrls:["https://mainnet.base.org"],
-        blockExplorerUrls:["https://basescan.org"]
+        rpcUrls:[BASE_RPC],blockExplorerUrls:["https://basescan.org"]
       }]});
     }
   }
 }
 
-// ─── FINALIZE ─────────────────────────────────────────────────────────────
-// KEY FIX: We pass the Base network object with ensAddress explicitly set to
-// undefined. Then we override getNetwork() on the provider so ethers never
-// tries to detect the network (which triggers the ENS lookup).
-async function finalize(eth) {
-  await switchToBase(eth);
-
-  // Create provider with hardcoded Base network — ethers won't auto-detect
-  provider = new ethers.providers.Web3Provider(eth, {
-    chainId: 8453,
-    name: "base",
-    ensAddress: undefined  // no ENS on Base
-  });
-
-  // Override getNetwork so ethers NEVER calls eth_chainId and triggers ENS
-  provider.getNetwork = async () => ({
-    chainId: 8453,
-    name: "base",
-    ensAddress: undefined
-  });
-
-  signer = provider.getSigner();
-
-  // Get address directly from wallet, not from ethers signer
-  // (avoids any ENS reverse-lookup)
-  const accounts = await eth.request({method:"eth_accounts"});
-  userAddr = accounts[0];
-
-  // Override getAddress on the signer too
-  signer.getAddress = async () => userAddr;
-
-  // Build contracts
-  tokenContract = new ethers.Contract(TOKEN_ADDR, TOKEN_ABI, signer);
-  usdcContract  = new ethers.Contract(USDC_ADDR,  USDC_ABI,  signer);
-
-  // Also override getNetwork on contracts' provider references
-  tokenContract.provider.getNetwork = provider.getNetwork;
-  usdcContract.provider.getNetwork  = provider.getNetwork;
-
-  // UI
-  $("wAddr").textContent = userAddr.slice(0,6)+"…"+userAddr.slice(-4);
-  $("walletPill").classList.add("show");
-  $("connectCard").style.display = "none";
-  $("mintCard").style.display    = "block";
-
-  if(!TOKEN_ADDR.includes("DEPLOY")) {
-    $("contractDisplay").innerHTML =
-      `<a href="https://basescan.org/address/${TOKEN_ADDR}" target="_blank">${TOKEN_ADDR.slice(0,6)}…${TOKEN_ADDR.slice(-4)}</a>`;
-  }
-
-  await loadStats();
-  await checkAllowance();
-  setInterval(loadStats, 10_000);
-
-  eth.on?.("accountsChanged", ()=>location.reload());
-  eth.on?.("chainChanged",    ()=>location.reload());
-}
-
-// ─── CONNECT ──────────────────────────────────────────────────────────────
+// ── CONNECT ───────────────────────────────────────────────────────────────
 async function connectWallet() {
-  setBtn("connectBtn", true, "Connecting…");
+  setBtn("connectBtn",true,"Connecting…");
   try {
     if(!window.ethereum) await new Promise(r=>setTimeout(r,1000));
-    const eth = window.ethereum;
-    if(!eth) {
-      toast("No wallet found. Install MetaMask or another EVM wallet.", "error");
-      setBtn("connectBtn", false, "⬡ &nbsp;Connect Wallet");
+    wallet = window.ethereum;
+    if(!wallet){
+      toast("No wallet found. Install MetaMask or another EVM wallet.","error");
+      setBtn("connectBtn",false,"⬡ &nbsp;Connect Wallet");
       return;
     }
-    await eth.request({method:"eth_requestAccounts"});
-    await finalize(eth);
-    toast("Wallet connected!", "success");
+    const accounts = await wallet.request({method:"eth_requestAccounts"});
+    userAddr = accounts[0];
+    await switchToBase();
+    showConnected();
+    toast("Wallet connected!","success");
   } catch(e) {
-    if(e.code===4001) toast("Connection rejected — please try again.", "info");
-    else toast(e.message||"Connection failed", "error");
-    setBtn("connectBtn", false, "⬡ &nbsp;Connect Wallet");
+    if(e.code===4001) toast("Connection rejected — please try again.","info");
+    else toast(e.message||"Connection failed","error");
+    setBtn("connectBtn",false,"⬡ &nbsp;Connect Wallet");
   }
 }
 
-// ─── DISCONNECT ───────────────────────────────────────────────────────────
-function doDisconnect() {
-  provider=signer=tokenContract=usdcContract=userAddr=null; approved=false;
+function showConnected() {
+  $("wAddr").textContent = userAddr.slice(0,6)+"…"+userAddr.slice(-4);
+  $("walletPill").classList.add("show");
+  $("connectCard").style.display="none";
+  $("mintCard").style.display="block";
+  if(!TOKEN_ADDR.includes("DEPLOY")) {
+    $("contractDisplay").innerHTML=
+      `<a href="https://basescan.org/address/${TOKEN_ADDR}" target="_blank">${TOKEN_ADDR.slice(0,6)}…${TOKEN_ADDR.slice(-4)}</a>`;
+  }
+  loadStats();
+  checkAllowance();
+  setInterval(loadStats, 10_000);
+  wallet.on?.("accountsChanged",()=>location.reload());
+  wallet.on?.("chainChanged",   ()=>location.reload());
+}
+
+// ── DISCONNECT ────────────────────────────────────────────────────────────
+function doDisconnect(){
+  wallet=userAddr=null; approved=false;
   $("walletPill").classList.remove("show");
   $("mintCard").style.display="none";
   $("connectCard").style.display="block";
   toast("Disconnected","info");
 }
 
-// ─── APPROVE ──────────────────────────────────────────────────────────────
+// ── APPROVE ───────────────────────────────────────────────────────────────
 async function approveUSDC() {
   try {
-    setBtn("approveBtn", true, "Approving…");
-    const needed = ethers.utils.parseUnits((mintAmt*0.5).toFixed(6), 6);
-    // Use populateTransaction then send raw to avoid ENS resolution
-    const populated = await usdcContract.populateTransaction.approve(TOKEN_ADDR, needed);
-    const txHash = await window.ethereum.request({
-      method: "eth_sendTransaction",
-      params: [{
-        from:  userAddr,
-        to:    USDC_ADDR,
-        data:  populated.data
-      }]
-    });
-    toast("Approval submitted — waiting…","info");
-    await waitForTx(txHash);
-    approved = true; renderButtons();
-    toast("USDC approved! Now mint.", "success");
-    $("s2").className = "sdot on";
+    setBtn("approveBtn",true,"Approving…");
+    // Encode with ethers Interface — perfectly correct calldata, no provider
+    const amount = ethers.utils.parseUnits((mintAmt*0.5).toFixed(6), 6);
+    const data = iUsdc.encodeFunctionData("approve",[TOKEN_ADDR, amount]);
+    console.log("approve calldata:", data); // visible in browser console if needed
+    toast("Check your wallet…","info");
+    await sendTx(USDC_ADDR, data);
+    approved=true; renderButtons();
+    toast("USDC approved! Now mint.","success");
+    $("s2").className="sdot on";
   } catch(e) {
-    if(e.code===4001||e.code===4100) toast("Approval rejected","info");
-    else toast(e.reason||e.message||"Approval failed","error");
+    if(e.code===4001||/reject|denied|cancel/i.test(e.message||""))
+      toast("Approval rejected","info");
+    else toast(e.message||"Approval failed","error");
   } finally {
-    setBtn("approveBtn", false, "① Approve USDC");
+    setBtn("approveBtn",false,"① Approve USDC");
   }
 }
 
-// ─── MINT ─────────────────────────────────────────────────────────────────
+// ── MINT ──────────────────────────────────────────────────────────────────
 async function doMint() {
   try {
-    setBtn("mintBtn", true, "Minting…");
+    setBtn("mintBtn",true,"Minting…");
     $("txLink").style.display="none";
-    updateBar(prevMinted, mintAmt);
-    const populated = await tokenContract.populateTransaction.mint(
-      ethers.BigNumber.from(mintAmt)
-    );
-    const txHash = await window.ethereum.request({
-      method: "eth_sendTransaction",
-      params: [{
-        from: userAddr,
-        to:   TOKEN_ADDR,
-        data: populated.data
-      }]
-    });
-    toast("TX sent — confirming…","info");
-    const rc = await waitForTx(txHash);
+    // Encode with ethers Interface — no provider, no ENS
+    const data = iToken.encodeFunctionData("mint",[ethers.BigNumber.from(mintAmt)]);
+    console.log("mint calldata:", data);
+    toast("Check your wallet…","info");
+    const {hash} = await sendTx(TOKEN_ADDR, data);
     $("s3").className="sdot on";
     toast(`🎉 ${mintAmt} puMPP minted!`,"success");
     flashVal("cntMinted");
-    const lnk=$("txLink");
-    lnk.href=`https://basescan.org/tx/${txHash}`;
-    lnk.style.display="block";
+    $("txLink").href=`https://basescan.org/tx/${hash}`;
+    $("txLink").style.display="block";
     approved=false; renderButtons();
     await loadStats();
   } catch(e) {
-    if(e.code===4001||e.code===4100) toast("Transaction rejected","info");
-    else toast(e.reason||e.message||"Mint failed","error");
+    if(e.code===4001||/reject|denied|cancel/i.test(e.message||""))
+      toast("Transaction rejected","info");
+    else toast(e.message||"Mint failed","error");
     await loadStats();
   } finally {
-    setBtn("mintBtn", false, "② Mint puMPP");
+    setBtn("mintBtn",false,"② Mint puMPP");
   }
 }
 
-// ─── WAIT FOR TX ──────────────────────────────────────────────────────────
-// Polls BaseScan RPC until receipt arrives — no ethers provider needed
-async function waitForTx(hash) {
-  while(true) {
-    await new Promise(r=>setTimeout(r,2000));
-    try {
-      const res = await fetch("https://mainnet.base.org", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({jsonrpc:"2.0",id:1,method:"eth_getTransactionReceipt",params:[hash]})
-      });
-      const data = await res.json();
-      if(data.result) {
-        if(data.result.status==="0x0") throw new Error("Transaction reverted on-chain");
-        return data.result;
-      }
-    } catch(e) {
-      if(e.message.includes("reverted")) throw e;
-    }
-  }
-}
-
-// ─── BOOT ─────────────────────────────────────────────────────────────────
+// ── BOOT ──────────────────────────────────────────────────────────────────
 $("amtVal").textContent  = mintAmt;
 $("costVal").textContent = "$"+(mintAmt*0.5).toFixed(2);
 
+// Silent reconnect if already authorised
 window.addEventListener("load", async () => {
   await new Promise(r=>setTimeout(r,600));
-  const eth = window.ethereum;
-  if(!eth) return;
+  wallet = window.ethereum;
+  if(!wallet) return;
   try {
-    const accounts = await eth.request({method:"eth_accounts"});
-    if(accounts && accounts.length>0) {
-      await finalize(eth);
+    const accounts = await wallet.request({method:"eth_accounts"});
+    if(accounts && accounts.length>0){
+      userAddr = accounts[0];
+      await switchToBase();
+      showConnected();
       toast("Wallet reconnected","success");
     }
-  } catch(_) {}
+  } catch(_){}
 });
 </script>
 </body>
