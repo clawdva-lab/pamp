@@ -32,7 +32,7 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
 .logo::after{content:'';position:absolute;inset:-10px;border-radius:50%;border:1px dashed rgba(0,170,255,.2);animation:spin-ring 12s linear infinite}
 @keyframes spin-ring{to{transform:rotate(360deg)}}
 .brand{font-family:'Syne',sans-serif;font-size:clamp(36px,9vw,54px);font-weight:900;line-height:1;background:linear-gradient(135deg,#fff 20%,var(--cyan) 70%,var(--blue) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
-.tagline{font-size:11px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:10px}
+.tagline{font-size:11px;color:var(--muted);letter-spacing:.2em;text-transform:uppercase;margin-bottom:12px}
 .x-link{display:inline-flex;align-items:center;gap:7px;padding:8px 18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.12);border-radius:99px;color:#fff;text-decoration:none;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:.05em;transition:all .2s}
 .x-link:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.25);transform:translateY(-1px)}
 
@@ -83,7 +83,7 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
 .w-disc:hover{color:var(--error)}
 
 /* STEPPER */
-.stepper-row{display:flex;gap:12px;align-items:stretch;margin-bottom:18px}
+.stepper-row{display:flex;gap:12px;align-items:stretch;margin-bottom:16px}
 .stepper{flex:1;display:flex;align-items:center;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .s-btn{background:none;border:none;cursor:pointer;color:var(--blue);font-size:22px;font-weight:700;padding:0 20px;height:56px;transition:background .15s,color .15s;font-family:'Syne',sans-serif}
 .s-btn:hover{background:rgba(0,170,255,.1);color:var(--cyan)}
@@ -91,14 +91,43 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
 .cost-pill{display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(0,80,180,.28),rgba(0,30,90,.2));border:1px solid rgba(0,170,255,.22);border-radius:12px;min-width:100px;padding:8px 16px;gap:3px}
 .cost-label{font-size:9px;color:var(--muted);letter-spacing:.1em}
 .cost-val{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--cyan)}
-.steps{display:flex;gap:6px;margin-bottom:18px}
-.sdot{flex:1;height:3px;border-radius:99px;background:rgba(0,170,255,.1);transition:background .4s}
-.sdot.on{background:linear-gradient(90deg,var(--blue),var(--cyan));box-shadow:0 0 8px rgba(0,200,255,.5)}
 
-/* YOU RECEIVE BOX */
+/* RECEIVE BOX */
 .receive-box{text-align:center;margin-bottom:16px;padding:14px;background:rgba(0,200,255,.06);border:1px solid rgba(0,200,255,.15);border-radius:12px}
 .receive-label{font-size:10px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:5px}
 .receive-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:900;color:var(--cyan)}
+
+/* MINT-TO TOGGLE */
+.mint-to-toggle{display:flex;align-items:center;gap:10px;margin-bottom:14px;cursor:pointer;user-select:none}
+.toggle-track{width:38px;height:22px;border-radius:99px;background:rgba(0,170,255,.15);border:1px solid rgba(0,170,255,.25);position:relative;transition:background .2s;flex-shrink:0}
+.toggle-track.on{background:rgba(0,170,255,.35);border-color:var(--blue)}
+.toggle-thumb{width:16px;height:16px;border-radius:50%;background:var(--muted);position:absolute;top:2px;left:2px;transition:all .2s}
+.toggle-track.on .toggle-thumb{left:18px;background:var(--blue)}
+.toggle-label{font-size:11px;color:var(--muted);letter-spacing:.06em}
+.toggle-track.on + .toggle-label{color:var(--ice)}
+
+/* RECIPIENT INPUT */
+.recipient-wrap{margin-bottom:16px;display:none}
+.recipient-wrap.show{display:block}
+.recipient-label{font-size:10px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px}
+.recipient-input{
+  width:100%;background:rgba(0,0,0,.35);border:1px solid var(--border);
+  border-radius:10px;padding:12px 14px;
+  color:var(--ice);font-family:'Space Mono',monospace;font-size:12px;
+  outline:none;transition:border-color .2s;
+}
+.recipient-input::placeholder{color:var(--muted)}
+.recipient-input:focus{border-color:var(--blue)}
+.recipient-input.valid{border-color:var(--success)}
+.recipient-input.invalid{border-color:var(--error)}
+.recipient-hint{font-size:10px;margin-top:5px;min-height:14px}
+.recipient-hint.ok{color:var(--success)}
+.recipient-hint.err{color:var(--error)}
+
+/* STEPS */
+.steps{display:flex;gap:6px;margin-bottom:18px}
+.sdot{flex:1;height:3px;border-radius:99px;background:rgba(0,170,255,.1);transition:background .4s}
+.sdot.on{background:linear-gradient(90deg,var(--blue),var(--cyan));box-shadow:0 0 8px rgba(0,200,255,.5)}
 
 /* BUTTONS */
 .btn{width:100%;height:52px;border:none;border-radius:11px;cursor:pointer;position:relative;overflow:hidden;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;transition:transform .18s,box-shadow .18s}
@@ -110,17 +139,13 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
 .btn::after{content:'';position:absolute;top:0;left:-80%;width:50%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);animation:btn-sheen 2.4s ease-in-out infinite}
 .spinner{display:inline-block;width:15px;height:15px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin-r .65s linear infinite;vertical-align:middle;margin-right:7px}
 @keyframes spin-r{to{transform:rotate(360deg)}}
-
-/* INFO */
 .info-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid rgba(0,170,255,.06);font-size:12px}
 .info-row:last-child{border:none}
 .info-row .k{color:var(--muted)}.info-row .v{color:var(--ice);font-size:11px}
 .info-row .v a{color:var(--blue);text-decoration:none}.info-row .v a:hover{color:var(--cyan)}
 .tx-link{display:none;text-align:center;margin-top:14px;font-size:11px;color:var(--blue);text-decoration:none;letter-spacing:.06em}
 .tx-link:hover{color:var(--cyan);text-decoration:underline}
-
-/* TOAST */
-.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:rgba(2,18,42,.97);border:1px solid var(--border);backdrop-filter:blur(20px);border-radius:12px;padding:13px 22px;font-size:13px;display:flex;align-items:center;gap:9px;transition:transform .32s cubic-bezier(.34,1.56,.64,1),opacity .28s;opacity:0;z-index:999;max-width:400px;text-align:center;white-space:nowrap}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(70px);background:rgba(2,18,42,.97);border:1px solid var(--border);backdrop-filter:blur(20px);border-radius:12px;padding:13px 22px;font-size:13px;display:flex;align-items:center;gap:9px;transition:transform .32s cubic-bezier(.34,1.56,.64,1),opacity .28s;opacity:0;z-index:999;max-width:420px;text-align:center;white-space:nowrap}
 .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 .toast.success{border-color:rgba(0,255,187,.3)}.toast.error{border-color:rgba(255,59,107,.35)}.toast.info{border-color:rgba(0,170,255,.3)}
 </style>
@@ -186,6 +211,8 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
         <div class="sdot" id="s2"></div>
         <div class="sdot" id="s3"></div>
       </div>
+
+      <!-- Amount stepper -->
       <div class="stepper-row">
         <div class="stepper">
           <button class="s-btn" onclick="changeAmt(-1)">−</button>
@@ -197,10 +224,37 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
           <div class="cost-val" id="costVal">$0.20</div>
         </div>
       </div>
+
+      <!-- You receive -->
       <div class="receive-box">
         <div class="receive-label">You Receive</div>
         <div class="receive-val" id="pumppAmt">6,000 PUMPP</div>
       </div>
+
+      <!-- Mint-to toggle -->
+      <div class="mint-to-toggle" onclick="toggleMintTo()">
+        <div class="toggle-track" id="mintToTrack">
+          <div class="toggle-thumb"></div>
+        </div>
+        <span class="toggle-label" id="mintToLabel">Send to a different address</span>
+      </div>
+
+      <!-- Recipient input (hidden by default) -->
+      <div class="recipient-wrap" id="recipientWrap">
+        <div class="recipient-label">Recipient Address</div>
+        <input
+          class="recipient-input"
+          id="recipientInput"
+          type="text"
+          placeholder="0x... wallet address"
+          oninput="validateRecipient()"
+          spellcheck="false"
+          autocomplete="off"
+        />
+        <div class="recipient-hint" id="recipientHint"></div>
+      </div>
+
+      <!-- Action buttons -->
       <button class="btn btn-approve" id="approveBtn" onclick="approveUSDC()">① Approve USDC</button>
       <button class="btn btn-mint"    id="mintBtn"    onclick="doMint()" style="display:none">② Mint puMPP</button>
       <a class="tx-link" id="txLink" href="#" target="_blank">↗ View on BaseScan</a>
@@ -217,7 +271,7 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
       <div class="info-row"><span class="k">Total Cap</span><span class="v">100,000,000</span></div>
       <div class="info-row"><span class="k">Public Mint</span><span class="v">60,000,000</span></div>
       <div class="info-row"><span class="k">USDC</span><span class="v"><a href="https://basescan.org/address/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" target="_blank">0x8335…A02913</a></span></div>
-      <div class="info-row"><span class="k">Contract</span><span class="v"><a href="https://basescan.org/address/0xd60fc6Fc5F3AFd4289D5d195d587cCf5e5Ac0EaF" target="_blank">0xd60f…EaF</a></span></div>
+      <div class="info-row"><span class="k">Contract</span><span class="v"><a href="https://basescan.org/address/PASTE_NEW_CONTRACT_HERE" target="_blank" id="contractLink">Deploy new contract ↗</a></span></div>
     </div>
   </div>
 
@@ -225,21 +279,22 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
 
 <div class="toast" id="toast"><span id="toastIcon"></span>&nbsp;<span id="toastMsg"></span></div>
 
-<!-- ethers v5 — used ONLY for Interface.encodeFunctionData. No provider. No ENS. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
 <script>
 // ════════════════════════════════════════════════════════════
-// CONFIG
+// CONFIG — update TOKEN_ADDR after deploying new contract
 // ════════════════════════════════════════════════════════════
-const TOKEN_ADDR = "0x5cC400f9098bBD0F1ef01ea11Cf43b1C33461Ccf";
-const USDC_ADDR  = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
-const BASE_RPC   = "https://mainnet.base.org";
-const MINTABLE   = 60_000_000;
+const TOKEN_ADDR    = "0x48a157671D173a4628945378efe60ABa30e93E4B";
+const USDC_ADDR     = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
+const BASE_RPC      = "https://mainnet.base.org";
+const MINTABLE      = 60_000_000;
 const PUMPP_PER_MINT = 6000;
+const USDC_PER_MINT  = 0.20;
 
-// ABI — encode only, no provider
+// ABI — encode only, no provider, no ENS
 const iToken = new ethers.utils.Interface([
   "function mint(uint256 amount) external",
+  "function mintTo(uint256 amount, address recipient) external",
   "function publicMinted() view returns (uint256)"
 ]);
 const iUsdc = new ethers.utils.Interface([
@@ -250,7 +305,10 @@ const iUsdc = new ethers.utils.Interface([
 // STATE
 let wallet = null;
 let userAddr = null;
-let mintAmt = 1, approved = false, prevMinted = 0;
+let mintAmt = 1;
+let approved = false;
+let prevMinted = 0;
+let mintToEnabled = false;
 
 // DOM
 const $ = id => document.getElementById(id);
@@ -273,7 +331,7 @@ function setBtn(id, loading, label) {
 function changeAmt(d) {
   mintAmt = Math.max(1, Math.min(500, mintAmt+d));
   $("amtVal").textContent = mintAmt;
-  $("costVal").textContent = "$"+(mintAmt*0.2).toFixed(2);
+  $("costVal").textContent = "$"+(mintAmt*USDC_PER_MINT).toFixed(2);
   $("pumppAmt").textContent = (mintAmt*PUMPP_PER_MINT).toLocaleString()+" PUMPP";
   checkAllowance();
 }
@@ -286,7 +344,57 @@ function flashVal(id) {
   const el=$(id); el.classList.add("flash"); setTimeout(()=>el.classList.remove("flash"),700);
 }
 
-// DIRECT RPC — no ethers provider, no ENS ever
+// MINT-TO TOGGLE
+function toggleMintTo() {
+  mintToEnabled = !mintToEnabled;
+  const track = $("mintToTrack");
+  const wrap  = $("recipientWrap");
+  const label = $("mintToLabel");
+  if(mintToEnabled) {
+    track.classList.add("on");
+    wrap.classList.add("show");
+    label.textContent = "Sending to different address";
+    $("recipientInput").focus();
+  } else {
+    track.classList.remove("on");
+    wrap.classList.remove("show");
+    label.textContent = "Send to a different address";
+    $("recipientInput").value = "";
+    $("recipientHint").textContent = "";
+    $("recipientInput").className = "recipient-input";
+  }
+}
+
+function validateRecipient() {
+  const val = $("recipientInput").value.trim();
+  const hint = $("recipientHint");
+  const inp  = $("recipientInput");
+  if(!val) {
+    inp.className = "recipient-input";
+    hint.textContent = "";
+    hint.className = "recipient-hint";
+    return false;
+  }
+  if(/^0x[0-9a-fA-F]{40}$/.test(val)) {
+    inp.className = "recipient-input valid";
+    hint.textContent = "✓ Valid address";
+    hint.className = "recipient-hint ok";
+    return true;
+  } else {
+    inp.className = "recipient-input invalid";
+    hint.textContent = "✗ Enter a valid 0x address";
+    hint.className = "recipient-hint err";
+    return false;
+  }
+}
+
+function getRecipient() {
+  if(!mintToEnabled) return userAddr;
+  const val = $("recipientInput").value.trim();
+  return val || userAddr;
+}
+
+// DIRECT RPC — no ethers provider, no ENS
 let _id = 1;
 async function rpc(method, params=[]) {
   const res = await fetch(BASE_RPC, {
@@ -323,7 +431,7 @@ async function checkAllowance() {
     const data = iUsdc.encodeFunctionData("allowance",[userAddr, TOKEN_ADDR]);
     const result = await rpc("eth_call",[{to:USDC_ADDR, data},"latest"]);
     const [al] = iUsdc.decodeFunctionResult("allowance", result);
-    const needed = ethers.utils.parseUnits((mintAmt*0.2).toFixed(6), 6);
+    const needed = ethers.utils.parseUnits((mintAmt*USDC_PER_MINT).toFixed(6), 6);
     approved = al.gte(needed);
     renderButtons();
   } catch(_) {}
@@ -339,13 +447,12 @@ function renderButtons() {
   }
 }
 
-// SEND TX — raw wallet request, no ethers provider
+// SEND TX
 async function sendTx(toAddr, calldata) {
   const txParams = {
     from: userAddr.toLowerCase(),
     to:   toAddr.toLowerCase(),
     data: calldata,
-    // Gas limits: approve=200k, mint=500k (SafeERC20 needs more gas)
     gas: toAddr.toLowerCase() === USDC_ADDR.toLowerCase() ? "0x30d40" : "0x7a120"
   };
   const txHash = await wallet.request({
@@ -353,7 +460,6 @@ async function sendTx(toAddr, calldata) {
     params: [txParams]
   });
   toast("Confirming on Base…","info");
-  // Poll for receipt
   for(let i=0; i<60; i++) {
     await new Promise(r=>setTimeout(r,2500));
     const receipt = await rpc("eth_getTransactionReceipt",[txHash]);
@@ -374,8 +480,7 @@ async function switchToBase() {
       await wallet.request({method:"wallet_addEthereumChain", params:[{
         chainId:"0x2105", chainName:"Base",
         nativeCurrency:{name:"Ether",symbol:"ETH",decimals:18},
-        rpcUrls:[BASE_RPC],
-        blockExplorerUrls:["https://basescan.org"]
+        rpcUrls:[BASE_RPC], blockExplorerUrls:["https://basescan.org"]
       }]});
     }
   }
@@ -418,9 +523,9 @@ function showConnected() {
 
 // DISCONNECT
 function doDisconnect() {
-  wallet=userAddr=null; approved=false;
+  wallet=userAddr=null; approved=false; mintToEnabled=false;
   $("walletPill").classList.remove("show");
-  $("mintCard").style.display   = "none";
+  $("mintCard").style.display    = "none";
   $("connectCard").style.display = "block";
   toast("Disconnected","info");
 }
@@ -429,7 +534,7 @@ function doDisconnect() {
 async function approveUSDC() {
   try {
     setBtn("approveBtn", true, "Approving…");
-    const amount = ethers.utils.parseUnits((mintAmt*0.2).toFixed(6), 6);
+    const amount = ethers.utils.parseUnits((mintAmt*USDC_PER_MINT).toFixed(6), 6);
     const data = iUsdc.encodeFunctionData("approve",[TOKEN_ADDR, amount]);
     toast("Check your wallet…","info");
     await sendTx(USDC_ADDR, data);
@@ -447,14 +552,49 @@ async function approveUSDC() {
 
 // MINT
 async function doMint() {
+  // Validate recipient if mint-to is enabled
+  if(mintToEnabled) {
+    const val = $("recipientInput").value.trim();
+    if(!val) {
+      toast("Please enter a recipient address","error");
+      return;
+    }
+    if(!validateRecipient()) {
+      toast("Invalid recipient address","error");
+      return;
+    }
+  }
+
   try {
     setBtn("mintBtn", true, "Minting…");
     $("txLink").style.display = "none";
-    const data = iToken.encodeFunctionData("mint",[ethers.BigNumber.from(mintAmt)]);
+
+    const recipient = getRecipient();
+    let data;
+
+    if(mintToEnabled && recipient.toLowerCase() !== userAddr.toLowerCase()) {
+      // Use mintTo — sends tokens to a different address
+      data = iToken.encodeFunctionData("mintTo",[
+        ethers.BigNumber.from(mintAmt),
+        recipient
+      ]);
+    } else {
+      // Use regular mint — tokens go to caller
+      data = iToken.encodeFunctionData("mint",[
+        ethers.BigNumber.from(mintAmt)
+      ]);
+    }
+
     toast("Check your wallet…","info");
     const {hash} = await sendTx(TOKEN_ADDR, data);
     $("s3").className="sdot on";
-    toast(`🎉 ${(mintAmt*PUMPP_PER_MINT).toLocaleString()} PUMPP minted!`,"success");
+
+    const pumppTotal = (mintAmt*PUMPP_PER_MINT).toLocaleString();
+    const shortRecipient = mintToEnabled
+      ? recipient.slice(0,6)+"…"+recipient.slice(-4)
+      : "your wallet";
+
+    toast(`🎉 ${pumppTotal} PUMPP → ${shortRecipient}!`,"success");
     flashVal("cntMinted");
     $("txLink").href = `https://basescan.org/tx/${hash}`;
     $("txLink").style.display = "block";
@@ -472,10 +612,9 @@ async function doMint() {
 
 // BOOT
 $("amtVal").textContent  = mintAmt;
-$("costVal").textContent = "$"+(mintAmt*0.2).toFixed(2);
+$("costVal").textContent = "$"+(mintAmt*USDC_PER_MINT).toFixed(2);
 $("pumppAmt").textContent = (mintAmt*PUMPP_PER_MINT).toLocaleString()+" PUMPP";
 
-// Silent reconnect on return visits
 window.addEventListener("load", async () => {
   await new Promise(r=>setTimeout(r,600));
   wallet = window.ethereum;
