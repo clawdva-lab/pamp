@@ -135,7 +135,7 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
   <div class="header">
     <div class="logo"><div class="logo-inner">⬡</div></div>
     <div class="brand">puMPP</div>
-    <div class="tagline">Base Network · 0.50 USDC → 6,000 PUMPP</div>
+    <div class="tagline">Base Network · 0.20 USDC → 6,000 PUMPP</div>
     <a href="https://x.com/pumppbase" target="_blank" class="x-link">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.746l7.73-8.835L1.254 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
       Follow @pumppbase
@@ -194,7 +194,7 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
         </div>
         <div class="cost-pill">
           <div class="cost-label">USDC COST</div>
-          <div class="cost-val" id="costVal">$0.50</div>
+          <div class="cost-val" id="costVal">$0.20</div>
         </div>
       </div>
       <div class="receive-box">
@@ -213,7 +213,7 @@ body{font-family:'Space Mono',monospace;background:var(--bg);color:#c8e8ff;min-h
       <div class="sec-label">Contract Info</div>
       <div class="info-row"><span class="k">Token</span><span class="v">puMPP (PUMPP)</span></div>
       <div class="info-row"><span class="k">Network</span><span class="v">Base Mainnet · 8453</span></div>
-      <div class="info-row"><span class="k">Mint Price</span><span class="v">0.50 USDC → 6,000 PUMPP</span></div>
+      <div class="info-row"><span class="k">Mint Price</span><span class="v">0.20 USDC → 6,000 PUMPP</span></div>
       <div class="info-row"><span class="k">Total Cap</span><span class="v">100,000,000</span></div>
       <div class="info-row"><span class="k">Public Mint</span><span class="v">60,000,000</span></div>
       <div class="info-row"><span class="k">USDC</span><span class="v"><a href="https://basescan.org/address/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" target="_blank">0x8335…A02913</a></span></div>
@@ -273,7 +273,7 @@ function setBtn(id, loading, label) {
 function changeAmt(d) {
   mintAmt = Math.max(1, Math.min(500, mintAmt+d));
   $("amtVal").textContent = mintAmt;
-  $("costVal").textContent = "$"+(mintAmt*0.5).toFixed(2);
+  $("costVal").textContent = "$"+(mintAmt*0.2).toFixed(2);
   $("pumppAmt").textContent = (mintAmt*PUMPP_PER_MINT).toLocaleString()+" PUMPP";
   checkAllowance();
 }
@@ -323,7 +323,7 @@ async function checkAllowance() {
     const data = iUsdc.encodeFunctionData("allowance",[userAddr, TOKEN_ADDR]);
     const result = await rpc("eth_call",[{to:USDC_ADDR, data},"latest"]);
     const [al] = iUsdc.decodeFunctionResult("allowance", result);
-    const needed = ethers.utils.parseUnits((mintAmt*0.5).toFixed(6), 6);
+    const needed = ethers.utils.parseUnits((mintAmt*0.2).toFixed(6), 6);
     approved = al.gte(needed);
     renderButtons();
   } catch(_) {}
@@ -429,7 +429,7 @@ function doDisconnect() {
 async function approveUSDC() {
   try {
     setBtn("approveBtn", true, "Approving…");
-    const amount = ethers.utils.parseUnits((mintAmt*0.5).toFixed(6), 6);
+    const amount = ethers.utils.parseUnits((mintAmt*0.2).toFixed(6), 6);
     const data = iUsdc.encodeFunctionData("approve",[TOKEN_ADDR, amount]);
     toast("Check your wallet…","info");
     await sendTx(USDC_ADDR, data);
@@ -472,7 +472,7 @@ async function doMint() {
 
 // BOOT
 $("amtVal").textContent  = mintAmt;
-$("costVal").textContent = "$"+(mintAmt*0.5).toFixed(2);
+$("costVal").textContent = "$"+(mintAmt*0.2).toFixed(2);
 $("pumppAmt").textContent = (mintAmt*PUMPP_PER_MINT).toLocaleString()+" PUMPP";
 
 // Silent reconnect on return visits
