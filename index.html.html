@@ -1,1494 +1,1177 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SOVEREIGN — Web3 Multi-Agent Realm</title>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Pride Hub — Tracker & Wars</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Syne:wght@400;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500&family=Exo+2:wght@300;400;600;700;900&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/topojson/3.0.2/topojson.min.js"></script>
 <style>
-  :root {
-    --gold: #c8a84b;
-    --gold-light: #e8c97a;
-    --gold-dim: #7a5e22;
-    --crimson: #8b1a1a;
-    --crimson-light: #c0392b;
-    --emerald: #0d5c3a;
-    --emerald-light: #1a9e65;
-    --ink: #0a0806;
-    --parchment: #f4edd8;
-    --parchment-dark: #e8d9b8;
-    --parchment-deep: #d4c090;
-    --shadow-ink: #1c1408;
-    --muted: #6b5a3e;
-    --border: rgba(200,168,75,0.35);
-    --panel-bg: rgba(10,8,6,0.85);
-    --panel-border: rgba(200,168,75,0.5);
-  }
+/* ════════════════════════════════════════
+   RESET & ROOT
+════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'DM Sans',sans-serif;background:#0a0a0f;color:#f0ede8;}
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+/* ════════════════════════════════════════
+   SUPER NAV (top-level app switcher)
+════════════════════════════════════════ */
+#super-nav{
+  position:fixed;top:0;left:0;right:0;height:48px;z-index:1000;
+  background:#06050d;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+  display:flex;align-items:center;gap:0;
+}
+.super-logo{
+  padding:0 20px;
+  font-family:'Syne',sans-serif;font-weight:800;font-size:15px;
+  letter-spacing:-0.3px;
+  display:flex;align-items:center;gap:8px;
+  border-right:1px solid rgba(255,255,255,0.08);
+  height:100%;flex-shrink:0;
+}
+.flag-strip{display:flex;gap:2px;}
+.flag-strip span{width:3px;height:16px;border-radius:1px;}
+.super-tabs{display:flex;height:100%;}
+.super-tab{
+  display:flex;align-items:center;gap:8px;
+  padding:0 22px;
+  font-size:13px;font-weight:500;
+  color:rgba(240,237,232,0.45);
+  cursor:pointer;border:none;background:none;
+  border-right:1px solid rgba(255,255,255,0.06);
+  transition:all 0.2s;position:relative;
+  font-family:'DM Sans',sans-serif;
+}
+.super-tab:hover{color:rgba(240,237,232,0.75);background:rgba(255,255,255,0.03);}
+.super-tab.active{color:#f0ede8;background:rgba(255,255,255,0.05);}
+.super-tab.active::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,#ff6b6b,#ff9f43,#ffd32a,#0be881,#18dcff,#ff78ff);
+}
+.tab-badge{
+  font-size:9px;padding:2px 6px;border-radius:3px;font-weight:700;
+}
+.badge-tracker{background:rgba(0,201,160,0.2);color:#00c9a0;}
+.badge-game{background:rgba(245,197,24,0.2);color:#f5c518;font-family:'Press Start 2P',monospace;}
 
-  body {
-    background: var(--ink);
-    color: var(--parchment);
-    font-family: 'Crimson Pro', Georgia, serif;
-    font-size: 16px;
-    line-height: 1.6;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+/* ════════════════════════════════════════
+   APP CONTAINERS
+════════════════════════════════════════ */
+.app-pane{
+  position:fixed;top:48px;left:0;right:0;bottom:0;
+  display:none;overflow:hidden;
+}
+.app-pane.active{display:block;}
 
-  /* Animated starfield bg */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background:
-      radial-gradient(ellipse at 20% 50%, rgba(139,26,26,0.15) 0%, transparent 60%),
-      radial-gradient(ellipse at 80% 20%, rgba(13,92,58,0.12) 0%, transparent 50%),
-      radial-gradient(ellipse at 60% 80%, rgba(200,168,75,0.08) 0%, transparent 40%);
-    pointer-events: none;
-    z-index: 0;
-  }
+/* ════════════════════════════════════════
+   ██████  TRACKER STYLES  ██████
+════════════════════════════════════════ */
+#pane-tracker{
+  overflow-y:auto;
+  background:#0a0a0f;
+}
+#pane-tracker::-webkit-scrollbar{width:6px;}
+#pane-tracker::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:3px;}
 
-  canvas#stars {
-    position: fixed; inset: 0;
-    pointer-events: none; z-index: 0; opacity: 0.5;
-  }
+/* tracker css vars scoped via body class or just inline */
+.t-bg{background:#0a0a0f;}
+.t-bg2{background:#111118;}
+.t-bg3{background:#18181f;}
 
-  .app { position: relative; z-index: 1; }
+/* nav within tracker (repurposed as section nav) */
+.t-section-nav{
+  display:flex;gap:4px;padding:16px 32px 0;
+}
+.t-snav-btn{
+  padding:6px 16px;border-radius:6px;font-size:13px;font-weight:500;
+  color:#9e9b94;cursor:pointer;border:none;background:none;
+  font-family:'DM Sans',sans-serif;transition:all 0.2s;
+}
+.t-snav-btn:hover{color:#f0ede8;background:rgba(255,255,255,0.05);}
+.t-snav-btn.active{color:#f0ede8;background:rgba(255,255,255,0.08);}
 
-  /* ---- TOP BAR ---- */
-  .topbar {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.75rem 1.5rem;
-    border-bottom: 1px solid var(--border);
-    background: rgba(10,8,6,0.9);
-    backdrop-filter: blur(8px);
-    position: sticky; top: 0; z-index: 100;
-  }
+.t-view{display:none;padding:0;}
+.t-view.active{display:block;}
 
-  .logo {
-    font-family: 'Cinzel', serif;
-    font-weight: 900;
-    font-size: 1.4rem;
-    letter-spacing: 0.3em;
-    color: var(--gold);
-    text-shadow: 0 0 30px rgba(200,168,75,0.4);
-  }
+/* hero */
+.t-hero{
+  padding:32px 32px 24px;position:relative;overflow:hidden;
+}
+.t-hero::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse 60% 60% at 50% 0%,rgba(232,66,106,0.12) 0%,transparent 70%);
+  pointer-events:none;
+}
+.t-eyebrow{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:1.5px;
+  color:#ff6b9d;margin-bottom:12px;
+}
+.t-eyebrow::before{content:'';width:24px;height:1px;background:#ff6b9d;}
+.t-h1{
+  font-family:'Syne',sans-serif;font-size:clamp(28px,4vw,46px);font-weight:800;
+  line-height:1.05;letter-spacing:-1.5px;margin-bottom:10px;
+}
+.t-h1 em{font-style:normal;color:#ff6b9d;}
+.t-sub{color:#9e9b94;font-size:14px;max-width:500px;font-weight:300;}
 
-  .logo span { color: var(--parchment); font-weight: 400; font-size: 0.7rem; display: block; letter-spacing: 0.5em; margin-top: -4px; }
+/* metrics */
+.t-metrics{
+  display:grid;grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:10px;padding:0 32px 20px;
+}
+.t-metric{
+  background:#111118;border:1px solid rgba(255,255,255,0.07);
+  border-radius:10px;padding:14px 16px;position:relative;overflow:hidden;
+  transition:border-color 0.2s;
+}
+.t-metric:hover{border-color:rgba(255,255,255,0.13);}
+.t-mlabel{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#5c5a56;margin-bottom:5px;font-weight:500;}
+.t-mval{font-family:'Syne',sans-serif;font-size:26px;font-weight:700;color:#f0ede8;line-height:1;}
+.t-mval span{font-size:13px;color:#9e9b94;font-family:'DM Sans',sans-serif;font-weight:300;margin-left:3px;}
+.t-mbar{position:absolute;bottom:0;left:0;height:2px;border-radius:0 2px 2px 0;}
 
-  .wallet-btn {
-    background: transparent;
-    border: 1px solid var(--gold);
-    color: var(--gold);
-    font-family: 'Cinzel', serif;
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    padding: 0.4rem 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .wallet-btn:hover { background: var(--gold); color: var(--ink); }
-  .wallet-btn.connected { border-color: var(--emerald-light); color: var(--emerald-light); font-size: 0.7rem; }
+/* content grid */
+.t-content{
+  display:grid;grid-template-columns:1fr 360px;
+  gap:0;padding:0 32px 32px;
+}
+.t-map-panel{
+  background:#111118;border:1px solid rgba(255,255,255,0.07);
+  border-radius:10px;overflow:hidden;position:relative;margin-right:12px;
+}
+.t-map-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.07);
+}
+.t-map-title{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:#9e9b94;font-weight:500;}
+.t-legend-row{display:flex;gap:10px;align-items:center;}
+.t-legend-item{
+  display:flex;align-items:center;gap:5px;font-size:11px;color:#5c5a56;
+  cursor:pointer;padding:3px 7px;border-radius:20px;border:1px solid transparent;
+  transition:all 0.15s;user-select:none;
+}
+.t-legend-item:hover{color:#9e9b94;border-color:rgba(255,255,255,0.07);}
+.t-legend-item.active{color:#f0ede8;border-color:rgba(255,255,255,0.13);background:rgba(255,255,255,0.05);}
+.t-legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+#t-map-svg-wrap{position:relative;width:100%;background:transparent;}
+#t-map-svg-wrap svg{display:block;width:100%;}
+#t-tooltip{
+  position:absolute;display:none;background:#18181f;
+  border:1px solid rgba(255,255,255,0.13);border-radius:6px;
+  padding:10px 12px;font-size:12px;pointer-events:none;z-index:20;max-width:200px;
+}
+.tt-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;margin-bottom:2px;}
+.tt-region{font-size:10px;color:#5c5a56;margin-bottom:6px;}
+.tt-score-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.tt-score{font-size:20px;font-family:'Syne',sans-serif;font-weight:700;}
+.tt-cat{font-size:10px;}
+.tt-badges{display:flex;flex-wrap:wrap;gap:3px;}
+.tt-badge{font-size:9px;padding:2px 6px;border-radius:3px;font-weight:500;}
+.tt-badge.yes{background:rgba(0,201,160,0.15);color:#00c9a0;}
+.tt-badge.no{background:rgba(232,66,78,0.12);color:#ff0077;}
 
-  .nav-tabs {
-    display: flex; gap: 0;
-  }
-  .tab-btn {
-    background: transparent;
-    border: none; border-bottom: 2px solid transparent;
-    color: var(--muted);
-    font-family: 'Cinzel', serif;
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-  .tab-btn:hover { color: var(--gold-light); }
-  .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+/* sidebar */
+.t-sidebar{display:flex;flex-direction:column;gap:10px;}
+.t-scard{background:#111118;border:1px solid rgba(255,255,255,0.07);border-radius:10px;overflow:hidden;flex-shrink:0;}
+.t-sheader{padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;align-items:center;justify-content:space-between;}
+.t-stitle{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#9e9b94;font-weight:500;}
+.t-search-wrap{position:relative;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.07);}
+.t-search-wrap input{
+  width:100%;background:#18181f;border:1px solid rgba(255,255,255,0.07);
+  border-radius:6px;padding:7px 10px 7px 28px;color:#f0ede8;
+  font-size:12px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color 0.2s;
+}
+.t-search-wrap input:focus{border-color:rgba(255,255,255,0.13);}
+.t-search-wrap input::placeholder{color:#5c5a56;}
+.t-search-icon{position:absolute;left:22px;top:50%;transform:translateY(-50%);color:#5c5a56;font-size:13px;pointer-events:none;}
+.t-sort-wrap{padding:7px 14px;border-bottom:1px solid rgba(255,255,255,0.07);display:flex;gap:5px;}
+.t-sort-btn{
+  font-size:10px;padding:3px 9px;border-radius:4px;background:none;
+  border:1px solid rgba(255,255,255,0.07);color:#5c5a56;cursor:pointer;
+  font-family:'DM Sans',sans-serif;transition:all 0.15s;
+}
+.t-sort-btn:hover{color:#9e9b94;border-color:rgba(255,255,255,0.13);}
+.t-sort-btn.active{color:#f0ede8;background:rgba(255,255,255,0.06);border-color:rgba(255,255,255,0.13);}
+.t-clist{max-height:400px;overflow-y:auto;}
+.t-clist::-webkit-scrollbar{width:3px;}
+.t-clist::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+.t-crow{
+  display:flex;align-items:center;gap:8px;padding:8px 14px;
+  border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer;transition:background 0.12s;
+}
+.t-crow:hover{background:rgba(255,255,255,0.03);}
+.t-crname{flex:1;font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.t-crscore{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;min-width:34px;text-align:right;}
+.t-crbar-wrap{width:55px;height:4px;background:rgba(255,255,255,0.06);border-radius:2px;}
+.t-crbar{height:100%;border-radius:2px;}
+.t-crdots{display:flex;gap:3px;}
+.t-crdot{width:5px;height:5px;border-radius:50%;}
 
-  /* ---- RESOURCE BAR ---- */
-  .resource-bar {
-    display: flex; gap: 1.5rem; padding: 0.6rem 1.5rem;
-    background: rgba(200,168,75,0.06);
-    border-bottom: 1px solid var(--border);
-    font-size: 0.8rem;
-    overflow-x: auto;
-  }
-  .resource {
-    display: flex; align-items: center; gap: 0.4rem;
-    white-space: nowrap;
-  }
-  .res-icon { font-size: 1rem; }
-  .res-name { color: var(--muted); font-family: 'Cinzel', serif; font-size: 0.65rem; letter-spacing: 0.08em; }
-  .res-value { color: var(--gold-light); font-weight: 600; }
-  .res-delta { font-size: 0.65rem; color: var(--emerald-light); }
-  .res-delta.neg { color: var(--crimson-light); }
+/* region chart */
+.t-chart-wrap{padding:14px;}
+.t-rrow{margin-bottom:8px;}
+.t-rlabel{display:flex;justify-content:space-between;font-size:11px;color:#9e9b94;margin-bottom:3px;}
+.t-rbar-bg{height:5px;background:rgba(255,255,255,0.06);border-radius:3px;overflow:hidden;}
+.t-rbar-fill{height:100%;border-radius:3px;}
 
-  /* ---- MAIN LAYOUT ---- */
-  .main-layout {
-    display: grid;
-    grid-template-columns: 280px 1fr 280px;
-    gap: 0;
-    min-height: calc(100vh - 120px);
-  }
+/* stats page */
+.t-stats-page{padding:0 32px 32px;}
+.t-stats-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:20px;}
+.t-stat-card{
+  background:#111118;border:1px solid rgba(255,255,255,0.07);border-radius:10px;
+  padding:18px 20px;transition:border-color 0.2s;
+}
+.t-stat-card:hover{border-color:rgba(255,255,255,0.13);}
+.t-sc-label{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#5c5a56;margin-bottom:8px;font-weight:500;}
+.t-sc-val{font-family:'Syne',sans-serif;font-size:32px;font-weight:800;line-height:1;margin-bottom:4px;}
+.t-sc-sub{font-size:11px;color:#5c5a56;}
+.t-big-chart{background:#111118;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:18px 20px;margin-bottom:14px;}
+.t-bc-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#9e9b94;font-weight:500;margin-bottom:14px;}
+.t-rights-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+.t-rights-block{
+  background:#111118;border:1px solid rgba(255,255,255,0.07);border-radius:10px;
+  padding:16px;text-align:center;transition:border-color 0.2s;
+}
+.t-rights-block:hover{border-color:rgba(255,255,255,0.13);}
+.t-rb-icon{font-size:22px;margin-bottom:6px;}
+.t-rb-num{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;line-height:1;}
+.t-rb-label{font-size:10px;color:#5c5a56;margin-top:3px;}
+.t-rb-pct{font-size:11px;color:#9e9b94;margin-top:2px;}
 
-  .panel {
-    border-right: 1px solid var(--border);
-    padding: 1rem;
-    overflow-y: auto;
-    max-height: calc(100vh - 120px);
-  }
-  .panel:last-child { border-right: none; border-left: 1px solid var(--border); }
+/* about page */
+.t-about-page{padding:0 32px 32px;max-width:780px;}
+.t-about-page h2{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;margin-bottom:10px;}
+.t-about-page p{color:#9e9b94;font-weight:300;margin-bottom:14px;line-height:1.8;font-size:14px;}
+.t-methodology{background:#111118;border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:18px 20px;margin-bottom:14px;}
+.t-score-bd{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:14px;}
+.t-score-item{background:#18181f;border-radius:6px;padding:12px;text-align:center;}
+.t-score-item-label{font-size:10px;color:#5c5a56;margin-bottom:3px;}
+.t-score-item-pts{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:#00c9a0;}
 
-  .panel-title {
-    font-family: 'Cinzel', serif;
-    font-size: 0.75rem;
-    letter-spacing: 0.2em;
-    color: var(--gold);
-    text-transform: uppercase;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 0.5rem;
-  }
+/* ════════════════════════════════════════
+   ████  GAME STYLES  ████
+════════════════════════════════════════ */
+#pane-game{background:#08060f;font-family:'Exo 2',sans-serif;}
 
-  /* ---- MAP AREA ---- */
-  .map-area {
-    position: relative;
-    overflow: hidden;
-    background: radial-gradient(ellipse at center, #0d1208 0%, #050704 100%);
-  }
+/* game screens */
+.g-screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.g-screen.hidden{display:none;}
 
-  canvas#realm-map {
-    display: block;
-    cursor: crosshair;
-  }
+#g-screen-intro{background:#08060f;overflow:hidden;}
+.g-intro-bg{position:absolute;inset:0;background:
+  radial-gradient(ellipse 80% 60% at 50% 0%,rgba(255,107,107,0.15) 0%,transparent 60%),
+  radial-gradient(ellipse 50% 50% at 20% 80%,rgba(24,220,255,0.1) 0%,transparent 50%),
+  radial-gradient(ellipse 50% 50% at 80% 70%,rgba(255,120,255,0.1) 0%,transparent 50%);
+  pointer-events:none;}
+.g-pixel-title{font-family:'Press Start 2P',monospace;font-size:clamp(18px,3.5vw,32px);text-align:center;line-height:1.6;letter-spacing:2px;margin-bottom:8px;}
+.g-pixel-title .r1{color:#ff6b6b;}.g-pixel-title .r2{color:#ff9f43;}.g-pixel-title .r3{color:#ffd32a;}
+.g-pixel-title .r4{color:#0be881;}.g-pixel-title .r5{color:#18dcff;}.g-pixel-title .r6{color:#ff78ff;}
+.g-sub-title{font-size:13px;color:#9e96b4;margin-bottom:36px;text-align:center;letter-spacing:2px;text-transform:uppercase;}
+.g-faction-pick{display:flex;gap:20px;flex-wrap:wrap;justify-content:center;}
+.g-faction-card{
+  width:230px;padding:24px 18px;border-radius:12px;border:2px solid rgba(255,255,255,0.16);
+  background:#10091a;cursor:pointer;text-align:center;transition:all 0.25s;
+}
+.g-faction-card:hover{transform:translateY(-5px);}
+.g-faction-card.rainbow{border-color:rgba(255,107,107,0.4);}
+.g-faction-card.rainbow:hover{box-shadow:0 20px 60px rgba(255,107,107,0.3);}
+.g-faction-card.straight{border-color:rgba(74,144,217,0.4);}
+.g-faction-card.straight:hover{box-shadow:0 20px 60px rgba(74,144,217,0.3);}
+.g-faction-icon{font-size:44px;margin-bottom:10px;display:block;}
+.g-faction-name{font-family:'Press Start 2P',monospace;font-size:10px;margin-bottom:7px;}
+.g-faction-name.rainbow{background:linear-gradient(90deg,#ff6b6b,#ff9f43,#ffd32a,#0be881,#18dcff,#ff78ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.g-faction-name.straight{color:#4a90d9;}
+.g-faction-desc{font-size:10px;color:#9e96b4;line-height:1.6;margin-bottom:14px;}
+.g-faction-stats{display:grid;grid-template-columns:1fr 1fr;gap:5px;font-size:9px;}
+.g-fstat{background:rgba(255,255,255,0.05);border-radius:4px;padding:5px 7px;}
+.g-fstat-label{color:#4a4260;font-size:8px;margin-bottom:2px;}
+.g-fstat-val{font-weight:700;}
 
-  .map-overlay {
-    position: absolute; top: 1rem; left: 1rem;
-    display: flex; flex-direction: column; gap: 0.5rem;
-  }
+/* game topbar */
+#g-topbar{
+  position:absolute;top:0;left:0;right:0;height:50px;z-index:50;
+  background:rgba(8,6,15,0.95);backdrop-filter:blur(12px);
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  display:flex;align-items:center;padding:0 14px;gap:14px;
+}
+.g-tb-faction{font-family:'Press Start 2P',monospace;font-size:8px;}
+.g-tb-level{display:flex;align-items:center;gap:7px;}
+.g-tb-lvl{font-family:'Press Start 2P',monospace;font-size:8px;background:#f5c518;color:#000;padding:3px 7px;border-radius:3px;}
+.g-exp-wrap{width:90px;height:5px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;}
+.g-exp-bar{height:100%;background:#f5c518;border-radius:3px;transition:width 0.4s;}
+.g-tb-hp{display:flex;align-items:center;gap:7px;font-size:10px;}
+.g-hp-wrap{width:110px;height:7px;background:rgba(255,0,0,0.15);border-radius:3px;overflow:hidden;}
+.g-hp-bar{height:100%;border-radius:3px;transition:width 0.3s;}
+.g-tb-gold{font-family:'Press Start 2P',monospace;font-size:8px;color:#f5c518;display:flex;align-items:center;gap:5px;}
+.g-tb-spacer{flex:1;}
+.g-tb-btn{font-family:'Press Start 2P',monospace;font-size:7px;padding:4px 9px;border-radius:4px;border:1px solid rgba(255,255,255,0.16);background:#18102a;color:#f0ede8;cursor:pointer;transition:all 0.15s;}
+.g-tb-btn:hover{background:rgba(255,255,255,0.08);}
 
-  .map-btn {
-    background: var(--panel-bg);
-    border: 1px solid var(--panel-border);
-    color: var(--gold);
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.1em;
-    padding: 0.3rem 0.7rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    width: 90px;
-  }
-  .map-btn:hover { background: rgba(200,168,75,0.2); }
-  .map-btn.active { background: rgba(200,168,75,0.3); }
+/* game layout */
+#g-screen-game{flex-direction:row;align-items:stretch;justify-content:flex-start;padding:0;}
+#g-sidebar-left{
+  width:210px;flex-shrink:0;background:#10091a;
+  border-right:1px solid rgba(255,255,255,0.08);
+  padding-top:50px;display:flex;flex-direction:column;overflow:hidden;
+}
+.g-sl-section{padding:10px 12px;border-bottom:1px solid rgba(255,255,255,0.08);}
+.g-sl-label{font-size:8px;text-transform:uppercase;letter-spacing:1.5px;color:#4a4260;font-weight:600;margin-bottom:7px;}
+.g-ability{
+  display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:5px;
+  border:1px solid rgba(255,255,255,0.08);cursor:pointer;background:#18102a;transition:all 0.15s;
+}
+.g-ability:hover{border-color:rgba(255,255,255,0.16);}
+.g-ability.selected{border-color:rgba(255,255,255,0.4);box-shadow:0 0 10px rgba(255,255,255,0.1);}
+.g-ability.on-cd{opacity:0.4;cursor:not-allowed;}
+.g-ab-icon{font-size:16px;flex-shrink:0;}
+.g-ab-name{font-size:9px;font-weight:700;}
+.g-ab-desc{font-size:8px;color:#4a4260;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.g-ab-cd{font-size:8px;color:#4a4260;margin-left:auto;flex-shrink:0;}
+.g-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px;}
+.g-st-item{background:rgba(255,255,255,0.04);border-radius:4px;padding:5px 7px;}
+.g-st-label{font-size:7px;color:#4a4260;margin-bottom:2px;}
+.g-st-val{font-size:11px;font-weight:700;}
+.g-score-list{display:flex;flex-direction:column;gap:3px;max-height:160px;overflow-y:auto;}
+.g-score-entry{display:flex;justify-content:space-between;font-size:9px;padding:3px 5px;border-radius:3px;}
+.g-score-entry:nth-child(odd){background:rgba(255,255,255,0.02);}
 
-  .map-info-bar {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    background: rgba(10,8,6,0.9);
-    border-top: 1px solid var(--border);
-    padding: 0.5rem 1rem;
-    display: flex; gap: 2rem; font-size: 0.75rem;
-    color: var(--muted);
-  }
-  .map-info-bar span { color: var(--parchment); }
+#g-map-area{
+  flex:1;min-width:0;padding-top:50px;position:relative;overflow:hidden;background:#08060f;
+}
+#g-map-wrap{width:100%;height:100%;}
+#g-map-wrap svg{display:block;width:100%;height:100%;}
+#g-ctip{
+  position:absolute;display:none;background:#18102a;border:1px solid rgba(255,255,255,0.16);
+  border-radius:6px;padding:7px 10px;font-size:10px;pointer-events:none;z-index:50;
+  max-width:170px;box-shadow:0 8px 32px rgba(0,0,0,0.6);
+}
+.g-ctip-name{font-family:'Press Start 2P',monospace;font-size:7px;margin-bottom:4px;}
+.g-ctip-owner{font-size:8px;margin-bottom:3px;}
+.g-ctip-hint{font-size:8px;color:#4a4260;}
 
-  /* ---- AGENT CARDS ---- */
-  .agent-card {
-    background: rgba(200,168,75,0.05);
-    border: 1px solid var(--border);
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-  }
-  .agent-card:hover { border-color: var(--gold); background: rgba(200,168,75,0.1); }
-  .agent-card.selected { border-color: var(--gold); background: rgba(200,168,75,0.15); }
-  .agent-card.rogue { border-color: var(--crimson-light); }
-  .agent-card.rogue:hover { background: rgba(139,26,26,0.2); }
+#g-sidebar-right{
+  width:230px;flex-shrink:0;background:#10091a;
+  border-left:1px solid rgba(255,255,255,0.08);
+  padding-top:50px;display:flex;flex-direction:column;overflow:hidden;
+}
+.g-battle-log{flex:1;overflow-y:auto;padding:8px 10px;display:flex;flex-direction:column-reverse;gap:3px;}
+.g-battle-log::-webkit-scrollbar{width:3px;}
+.g-battle-log::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:2px;}
+.g-log-entry{font-size:9px;line-height:1.5;padding:3px 5px;border-radius:3px;border-left:2px solid transparent;}
+.g-log-entry.attack{border-left-color:#ff6b6b;background:rgba(255,107,107,0.06);}
+.g-log-entry.loot{border-left-color:#f5c518;background:rgba(245,197,24,0.06);}
+.g-log-entry.heal{border-left-color:#0be881;background:rgba(11,232,129,0.06);}
+.g-log-entry.info{border-left-color:#4a4260;}
+.g-log-entry.capture{border-left-color:#ff78ff;background:rgba(255,120,255,0.08);}
+.g-inv-panel{border-top:1px solid rgba(255,255,255,0.08);padding:8px 10px;max-height:180px;overflow-y:auto;}
+.g-inv-grid{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;}
+.g-inv-item{
+  width:34px;height:34px;border-radius:4px;border:1px solid;
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  cursor:pointer;transition:transform 0.15s;background:rgba(0,0,0,0.3);
+}
+.g-inv-item:hover{transform:scale(1.1);}
+.g-inv-item.common{border-color:#7eb8f7;}
+.g-inv-item.rare{border-color:#a560f0;}
+.g-inv-item.epic{border-color:#ff9f43;}
+.g-inv-item.legendary{border-color:#ff6b6b;}
 
-  .agent-header { display: flex; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.4rem; }
+/* battle modal */
+#g-battle-modal{
+  position:absolute;inset:0;z-index:200;
+  background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+}
+#g-battle-modal.hidden{display:none;}
+.g-battle-box{
+  background:#10091a;border:2px solid rgba(255,255,255,0.16);border-radius:12px;
+  width:460px;max-width:95vw;padding:22px;animation:gSlideUp 0.25s ease;
+}
+@keyframes gSlideUp{from{transform:translateY(20px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+.g-battle-title{font-family:'Press Start 2P',monospace;font-size:11px;text-align:center;margin-bottom:14px;}
+.g-fighters{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.g-fighter{flex:1;text-align:center;}
+.g-fighter-icon{font-size:36px;margin-bottom:5px;}
+.g-fighter-name{font-size:10px;font-weight:700;margin-bottom:3px;}
+.g-fighter-hp-bar{height:7px;background:rgba(255,255,255,0.1);border-radius:3px;overflow:hidden;margin-top:3px;}
+.g-fighter-hp-fill{height:100%;border-radius:3px;transition:width 0.4s;}
+.g-vs{font-family:'Press Start 2P',monospace;font-size:13px;color:#f5c518;}
+.g-battle-btn{
+  padding:9px 7px;border-radius:5px;border:1px solid rgba(255,255,255,0.16);
+  background:#18102a;color:#f0ede8;font-family:'Press Start 2P',monospace;font-size:7px;
+  cursor:pointer;transition:all 0.15s;text-align:center;
+}
+.g-battle-btn:hover:not(:disabled){background:rgba(255,255,255,0.07);}
+.g-battle-btn:disabled{opacity:0.4;cursor:not-allowed;}
+.g-battle-btn.primary{border-color:rgba(255,107,107,0.5);color:#ff9f9f;}
+.g-battle-btn.flee{border-color:rgba(255,255,255,0.2);color:#4a4260;}
+.g-result-title{font-family:'Press Start 2P',monospace;font-size:13px;margin-bottom:10px;}
+.g-loot-drops{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:10px 0;}
+.g-loot-drop{padding:5px 10px;border-radius:5px;font-size:9px;font-weight:700;display:flex;align-items:center;gap:4px;}
+.g-loot-drop.common{background:rgba(126,184,247,0.15);border:1px solid #7eb8f7;color:#7eb8f7;}
+.g-loot-drop.rare{background:rgba(165,96,240,0.15);border:1px solid #a560f0;color:#a560f0;}
+.g-loot-drop.epic{background:rgba(255,159,67,0.15);border:1px solid #ff9f43;color:#ff9f43;}
+.g-loot-drop.legendary{background:rgba(255,107,107,0.15);border:1px solid #ff6b6b;color:#ff6b6b;}
+.g-exp-gain{font-size:11px;color:#f5c518;font-weight:700;margin-top:7px;}
+.g-pixel-btn{
+  font-family:'Press Start 2P',monospace;font-size:8px;padding:9px 18px;
+  border-radius:4px;border:none;cursor:pointer;transition:all 0.15s;
+}
+.g-pixel-btn:hover{transform:translateY(-2px);}
+.g-rainbow-btn{background:linear-gradient(135deg,#ff6b6b,#ff9f43,#ffd32a,#0be881,#18dcff,#ff78ff);color:#000;font-weight:900;}
 
-  .agent-avatar {
-    width: 36px; height: 36px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.1rem;
-    flex-shrink: 0;
-    border: 1px solid var(--border);
-  }
-  .agent-avatar.lord { background: rgba(200,168,75,0.2); border-color: var(--gold); }
-  .agent-avatar.rogue { background: rgba(139,26,26,0.3); border-color: var(--crimson-light); }
-  .agent-avatar.sub { background: rgba(13,92,58,0.2); border-color: var(--emerald-light); }
-  .agent-avatar.neutral { background: rgba(100,100,100,0.2); }
+/* dmg float */
+.g-dmg-float{
+  position:absolute;font-family:'Press Start 2P',monospace;font-size:12px;
+  pointer-events:none;z-index:400;animation:gFloatUp 1s ease forwards;
+  text-shadow:0 2px 8px rgba(0,0,0,0.8);
+}
+@keyframes gFloatUp{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-50px);}}
 
-  .agent-info { flex: 1; }
-  .agent-name {
-    font-family: 'Cinzel', serif;
-    font-size: 0.8rem;
-    color: var(--parchment);
-    font-weight: 600;
-  }
-  .agent-title { font-size: 0.7rem; color: var(--muted); font-style: italic; }
+/* level up */
+#g-levelup-flash{
+  position:absolute;inset:0;z-index:450;pointer-events:none;
+  display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity 0.5s;
+}
+#g-levelup-flash.show{opacity:1;}
+.g-levelup-text{font-family:'Press Start 2P',monospace;font-size:28px;color:#f5c518;text-shadow:0 0 40px #f5c518;}
 
-  .agent-rank {
-    font-family: 'Cinzel', serif;
-    font-size: 0.6rem;
-    letter-spacing: 0.1em;
-    padding: 0.1rem 0.4rem;
-    border: 1px solid;
-    text-transform: uppercase;
-  }
-  .rank-sovereign { color: var(--gold); border-color: var(--gold); }
-  .rank-lord { color: #a0c4e8; border-color: #a0c4e8; }
-  .rank-vassal { color: var(--emerald-light); border-color: var(--emerald-light); }
-  .rank-rogue { color: var(--crimson-light); border-color: var(--crimson-light); }
-  .rank-serf { color: var(--muted); border-color: var(--muted); }
-
-  .agent-stats {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    gap: 0.3rem; margin-top: 0.5rem;
-  }
-  .stat { text-align: center; }
-  .stat-val { font-size: 0.85rem; font-weight: 600; color: var(--gold-light); }
-  .stat-lbl { font-size: 0.6rem; color: var(--muted); font-family: 'Cinzel', serif; letter-spacing: 0.05em; }
-
-  .agent-actions { display: flex; gap: 0.4rem; margin-top: 0.6rem; }
-  .act-btn {
-    flex: 1;
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--parchment);
-    font-family: 'Cinzel', serif;
-    font-size: 0.6rem;
-    letter-spacing: 0.08em;
-    padding: 0.25rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-align: center;
-  }
-  .act-btn:hover { border-color: var(--gold); color: var(--gold); }
-  .act-btn.danger:hover { border-color: var(--crimson-light); color: var(--crimson-light); }
-  .act-btn.success:hover { border-color: var(--emerald-light); color: var(--emerald-light); }
-
-  /* ---- ACTIVITY FEED ---- */
-  .feed-item {
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(200,168,75,0.1);
-    font-size: 0.78rem;
-    color: var(--muted);
-    line-height: 1.4;
-  }
-  .feed-item:last-child { border-bottom: none; }
-  .feed-time { font-size: 0.65rem; color: rgba(107,90,62,0.6); font-family: 'Cinzel', serif; }
-  .feed-combat { color: #e88; }
-  .feed-trade { color: #8e8; }
-  .feed-recruit { color: #8ae; }
-  .feed-ascend { color: var(--gold); }
-
-  /* ---- MARKET PANEL ---- */
-  .market-row {
-    display: flex; align-items: center;
-    padding: 0.5rem 0;
-    border-bottom: 1px solid rgba(200,168,75,0.1);
-    gap: 0.5rem;
-    font-size: 0.78rem;
-  }
-  .market-row:last-child { border-bottom: none; }
-  .market-icon { font-size: 1rem; width: 24px; text-align: center; }
-  .market-name { flex: 1; color: var(--parchment); }
-  .market-price { color: var(--gold-light); font-weight: 600; min-width: 50px; text-align: right; }
-  .market-change { font-size: 0.65rem; min-width: 40px; text-align: right; }
-  .up { color: var(--emerald-light); }
-  .dn { color: var(--crimson-light); }
-
-  .trade-btn {
-    background: transparent;
-    border: 1px solid;
-    font-family: 'Cinzel', serif;
-    font-size: 0.6rem;
-    padding: 0.15rem 0.4rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    letter-spacing: 0.05em;
-  }
-  .buy-btn { border-color: var(--emerald-light); color: var(--emerald-light); }
-  .buy-btn:hover { background: rgba(26,158,101,0.2); }
-  .sell-btn { border-color: var(--crimson-light); color: var(--crimson-light); }
-  .sell-btn:hover { background: rgba(192,57,43,0.2); }
-
-  /* ---- EVENTS LOG ---- */
-  .event-panel {
-    padding: 0.75rem 1.5rem;
-    border-top: 1px solid var(--border);
-    background: rgba(10,8,6,0.9);
-    max-height: 100px;
-    overflow-y: auto;
-    display: flex; gap: 2rem;
-    align-items: center;
-    font-size: 0.75rem;
-  }
-  .event-ticker { flex: 1; overflow: hidden; white-space: nowrap; }
-  .ticker-inner { display: inline-block; animation: ticker 30s linear infinite; }
-  @keyframes ticker {
-    0% { transform: translateX(100%); }
-    100% { transform: translateX(-100%); }
-  }
-
-  /* ---- MODAL ---- */
-  .modal-overlay {
-    display: none;
-    position: fixed; inset: 0;
-    background: rgba(5,4,3,0.85);
-    z-index: 200;
-    align-items: center;
-    justify-content: center;
-  }
-  .modal-overlay.open { display: flex; }
-
-  .modal {
-    background: #0d0a07;
-    border: 1px solid var(--gold);
-    padding: 2rem;
-    max-width: 480px;
-    width: 90%;
-    position: relative;
-  }
-  .modal-title {
-    font-family: 'Cinzel', serif;
-    font-size: 1.1rem;
-    color: var(--gold);
-    letter-spacing: 0.2em;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 0.75rem;
-  }
-  .modal-close {
-    position: absolute; top: 0.75rem; right: 1rem;
-    background: none; border: none; color: var(--muted);
-    font-size: 1.2rem; cursor: pointer;
-  }
-  .modal-close:hover { color: var(--gold); }
-
-  .modal-body { font-size: 0.9rem; color: var(--parchment); line-height: 1.7; }
-  .modal-body p { margin-bottom: 0.75rem; }
-  .modal-body .highlight { color: var(--gold); font-weight: 600; }
-  .modal-body .danger { color: var(--crimson-light); }
-
-  .modal-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
-  .modal-btn {
-    flex: 1;
-    background: transparent;
-    border: 1px solid;
-    font-family: 'Cinzel', serif;
-    font-size: 0.75rem;
-    letter-spacing: 0.1em;
-    padding: 0.6rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    text-transform: uppercase;
-  }
-  .confirm-btn { border-color: var(--gold); color: var(--gold); }
-  .confirm-btn:hover { background: rgba(200,168,75,0.2); }
-  .cancel-btn { border-color: var(--muted); color: var(--muted); }
-  .cancel-btn:hover { border-color: var(--parchment); color: var(--parchment); }
-
-  /* ---- PROGRESS BARS ---- */
-  .progress-bar {
-    height: 3px;
-    background: rgba(200,168,75,0.15);
-    margin-top: 4px;
-    border-radius: 2px;
-    overflow: hidden;
-  }
-  .progress-fill {
-    height: 100%;
-    border-radius: 2px;
-    transition: width 1s ease;
-  }
-  .progress-gold { background: var(--gold); }
-  .progress-red { background: var(--crimson-light); }
-  .progress-green { background: var(--emerald-light); }
-
-  /* ---- SECTION HEADERS ---- */
-  .section-sub {
-    font-size: 0.65rem;
-    font-family: 'Cinzel', serif;
-    letter-spacing: 0.15em;
-    color: var(--muted);
-    text-transform: uppercase;
-    margin: 1rem 0 0.5rem;
-  }
-
-  /* ---- NOTIFICATIONS ---- */
-  #notifications {
-    position: fixed; top: 80px; right: 1rem;
-    z-index: 300;
-    display: flex; flex-direction: column; gap: 0.5rem;
-    pointer-events: none;
-  }
-
-  .notif {
-    background: rgba(10,8,6,0.95);
-    border-left: 3px solid var(--gold);
-    padding: 0.6rem 1rem;
-    font-size: 0.8rem;
-    color: var(--parchment);
-    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s;
-    max-width: 260px;
-  }
-  .notif.combat { border-left-color: var(--crimson-light); }
-  .notif.trade { border-left-color: var(--emerald-light); }
-
-  @keyframes slideIn {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
-  }
-  @keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
-  }
-
-  /* ---- SCROLLBAR ---- */
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--gold-dim); border-radius: 2px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
-
-  /* ---- AI CHAT ---- */
-  .ai-chat {
-    background: rgba(200,168,75,0.04);
-    border: 1px solid var(--border);
-    padding: 0.75rem;
-    margin-top: 1rem;
-  }
-  .ai-chat-title {
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    letter-spacing: 0.15em;
-    color: var(--gold);
-    margin-bottom: 0.5rem;
-  }
-  .ai-response {
-    font-size: 0.78rem;
-    color: var(--parchment);
-    font-style: italic;
-    line-height: 1.5;
-    min-height: 60px;
-    margin-bottom: 0.5rem;
-    color: var(--parchment);
-  }
-  .ai-input-row { display: flex; gap: 0.4rem; }
-  .ai-input {
-    flex: 1;
-    background: rgba(200,168,75,0.06);
-    border: 1px solid var(--border);
-    color: var(--parchment);
-    font-family: 'Crimson Pro', serif;
-    font-size: 0.8rem;
-    padding: 0.3rem 0.6rem;
-    outline: none;
-  }
-  .ai-input:focus { border-color: var(--gold); }
-  .ai-send {
-    background: transparent;
-    border: 1px solid var(--gold);
-    color: var(--gold);
-    font-family: 'Cinzel', serif;
-    font-size: 0.65rem;
-    padding: 0.3rem 0.6rem;
-    cursor: pointer;
-    letter-spacing: 0.08em;
-    transition: all 0.2s;
-  }
-  .ai-send:hover { background: rgba(200,168,75,0.2); }
-  .ai-thinking { color: var(--muted); font-style: italic; font-size: 0.75rem; }
-
-  /* Pulse animation */
-  @keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-  .pulsing { animation: pulse 2s ease infinite; }
-
-  /* ---- RESPONSIVE ---- */
-  @media (max-width: 900px) {
-    .main-layout { grid-template-columns: 1fr; }
-    .panel { max-height: none; border-right: none; border-bottom: 1px solid var(--border); }
-    .panel:last-child { border-left: none; }
-    canvas#realm-map { width: 100%; height: 300px; }
-  }
+/* toast */
+#g-toast{
+  position:absolute;bottom:20px;left:50%;transform:translateX(-50%);
+  background:#18102a;border:1px solid #f5c518;border-radius:6px;
+  padding:7px 18px;font-family:'Press Start 2P',monospace;font-size:7px;color:#f5c518;
+  z-index:500;opacity:0;transition:opacity 0.3s;pointer-events:none;
+}
 </style>
 </head>
 <body>
-<canvas id="stars"></canvas>
 
-<div class="app">
-
-<!-- TOP BAR -->
-<header class="topbar">
-  <div class="logo">SOVEREIGN<span>WEB3 · REALM · v0.9.1</span></div>
-  <nav class="nav-tabs">
-    <button class="tab-btn active" onclick="switchTab('realm')">Realm</button>
-    <button class="tab-btn" onclick="switchTab('market')">Market</button>
-    <button class="tab-btn" onclick="switchTab('agents')">Agents</button>
-    <button class="tab-btn" onclick="switchTab('council')">Council</button>
-  </nav>
-  <button class="wallet-btn" id="wallet-btn" onclick="connectWallet()">Connect Wallet</button>
-</header>
-
-<!-- RESOURCE BAR -->
-<div class="resource-bar">
-  <div class="resource">
-    <span class="res-icon">⚜️</span>
-    <div>
-      <div class="res-name">SOVEREIGN RANK</div>
-      <div class="res-value" id="res-rank">Lord</div>
+<!-- ══════════════════════════════════
+     SUPER NAV
+══════════════════════════════════ -->
+<div id="super-nav">
+  <div class="super-logo">
+    <div class="flag-strip">
+      <span style="background:#E40303"></span><span style="background:#FF8C00"></span>
+      <span style="background:#FFED00"></span><span style="background:#008026"></span>
+      <span style="background:#24408E"></span><span style="background:#732982"></span>
     </div>
+    Pride Hub
   </div>
-  <div class="resource">
-    <span class="res-icon">🏛️</span>
-    <div>
-      <div class="res-name">PLOTS HELD</div>
-      <div class="res-value" id="res-plots">3</div>
-      <div class="res-delta" id="plots-delta">+1 this cycle</div>
-    </div>
-  </div>
-  <div class="resource">
-    <span class="res-icon">💰</span>
-    <div>
-      <div class="res-name">GOLD</div>
-      <div class="res-value" id="res-gold">2,840</div>
-      <div class="res-delta" id="gold-delta">+120/hr</div>
-    </div>
-  </div>
-  <div class="resource">
-    <span class="res-icon">⚔️</span>
-    <div>
-      <div class="res-name">POWER</div>
-      <div class="res-value" id="res-power">1,240</div>
-      <div class="res-delta">+45/hr</div>
-    </div>
-  </div>
-  <div class="resource">
-    <span class="res-icon">🌾</span>
-    <div>
-      <div class="res-name">GRAIN</div>
-      <div class="res-value" id="res-grain">560</div>
-      <div class="res-delta">+80/hr</div>
-    </div>
-  </div>
-  <div class="resource">
-    <span class="res-icon">🪨</span>
-    <div>
-      <div class="res-name">STONE</div>
-      <div class="res-value" id="res-stone">340</div>
-      <div class="res-delta">+30/hr</div>
-    </div>
-  </div>
-  <div class="resource">
-    <span class="res-icon">👥</span>
-    <div>
-      <div class="res-name">SUB-AGENTS</div>
-      <div class="res-value" id="res-agents">7</div>
-      <div class="res-delta">Max 12</div>
-    </div>
-  </div>
-  <div class="resource">
-    <span class="res-icon">🔮</span>
-    <div>
-      <div class="res-name">INFLUENCE</div>
-      <div class="res-value" id="res-influence">3,120</div>
-      <div class="res-delta">+60/hr</div>
-    </div>
+  <div class="super-tabs">
+    <button class="super-tab active" onclick="switchApp('tracker',this)">
+      🗺️ World Tracker <span class="tab-badge badge-tracker">DATA</span>
+    </button>
+    <button class="super-tab" onclick="switchApp('game',this)">
+      ⚔️ Pride Wars <span class="tab-badge badge-game">RPG</span>
+    </button>
   </div>
 </div>
 
-<!-- MAIN LAYOUT -->
-<div class="main-layout" id="main-realm">
+<!-- ══════════════════════════════════
+     TRACKER PANE
+══════════════════════════════════ -->
+<div id="pane-tracker" class="app-pane active">
 
-  <!-- LEFT: AGENTS PANEL -->
-  <aside class="panel">
-    <div class="panel-title">⚔️ Active Agents</div>
+  <div class="t-section-nav">
+    <button class="t-snav-btn active" onclick="tSwitchView('map',this)">World Map</button>
+    <button class="t-snav-btn" onclick="tSwitchView('stats',this)">Statistics</button>
+    <button class="t-snav-btn" onclick="tSwitchView('about',this)">About</button>
+  </div>
 
-    <div class="section-sub">Your Domain</div>
-    <div id="my-agents-list"></div>
-
-    <div class="section-sub" style="margin-top:1.2rem;">Nearby Agents</div>
-    <div id="nearby-agents-list"></div>
-
-    <!-- AI Advisor -->
-    <div class="ai-chat">
-      <div class="ai-chat-title">🔮 Royal Advisor (AI)</div>
-      <div class="ai-response" id="ai-response">
-        <span class="ai-thinking pulsing">Awaiting your counsel, my liege...</span>
+  <!-- MAP VIEW -->
+  <div id="t-view-map" class="t-view active">
+    <div class="t-hero">
+      <div class="t-eyebrow">Global LGBT+ Rights</div>
+      <h1 class="t-h1">Pride <em>Index</em><br>World Tracker</h1>
+      <p class="t-sub">Tracking acceptance, legal rights, and protections for LGBT+ people across 65 countries worldwide.</p>
+    </div>
+    <div class="t-metrics" id="t-metrics-row"></div>
+    <div class="t-content">
+      <div class="t-map-panel">
+        <div class="t-map-header">
+          <span class="t-map-title">Interactive Map</span>
+          <div class="t-legend-row" id="t-legend-row"></div>
+        </div>
+        <div id="t-map-svg-wrap"><div id="t-tooltip"></div></div>
       </div>
-      <div class="ai-input-row">
-        <input class="ai-input" id="ai-input" placeholder="Ask your advisor..." onkeydown="if(event.key==='Enter') askAdvisor()">
-        <button class="ai-send" onclick="askAdvisor()">Ask ↗</button>
+      <div class="t-sidebar">
+        <div class="t-scard" style="flex:1;min-height:0;display:flex;flex-direction:column;">
+          <div class="t-sheader">
+            <span class="t-stitle">Countries</span>
+            <span id="t-count-label" style="font-size:10px;color:#5c5a56;"></span>
+          </div>
+          <div class="t-search-wrap">
+            <span class="t-search-icon">⌕</span>
+            <input type="text" id="t-search" placeholder="Search country…" oninput="tOnSearch()"/>
+          </div>
+          <div class="t-sort-wrap">
+            <button class="t-sort-btn active" onclick="tSetSort('name',this)">A–Z</button>
+            <button class="t-sort-btn" onclick="tSetSort('score-desc',this)">Score ↓</button>
+            <button class="t-sort-btn" onclick="tSetSort('score-asc',this)">Score ↑</button>
+          </div>
+          <div class="t-clist" id="t-country-list"></div>
+        </div>
+        <div class="t-scard">
+          <div class="t-sheader"><span class="t-stitle">By Region</span></div>
+          <div class="t-chart-wrap" id="t-region-chart"></div>
+        </div>
       </div>
     </div>
-  </aside>
+  </div>
 
-  <!-- CENTER: MAP -->
-  <main class="map-area">
-    <canvas id="realm-map"></canvas>
-    <div class="map-overlay">
-      <button class="map-btn active" onclick="setMapMode('view')">View</button>
-      <button class="map-btn" onclick="setMapMode('claim')">Claim Plot</button>
-      <button class="map-btn" onclick="setMapMode('deploy')">Deploy Agent</button>
-      <button class="map-btn" onclick="setMapMode('trade')">Trade Route</button>
+  <!-- STATS VIEW -->
+  <div id="t-view-stats" class="t-view">
+    <div class="t-stats-page" style="padding-top:20px;">
+      <div class="t-stats-grid" id="t-stats-grid"></div>
+      <div class="t-big-chart">
+        <div class="t-bc-title">Score distribution</div>
+        <div id="t-dist-chart"></div>
+      </div>
+      <div style="margin-bottom:10px;font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#9e9b94;font-weight:500;">Rights by category</div>
+      <div class="t-rights-grid" id="t-rights-grid"></div>
     </div>
-    <div class="map-info-bar">
-      <div>Biome: <span id="map-biome">Heartlands</span></div>
-      <div>Coords: <span id="map-coords">—</span></div>
-      <div>Tile: <span id="map-tile">—</span></div>
-      <div>Turn: <span id="map-turn">144</span></div>
-      <div>Cycle: <span id="map-cycle">Dawn</span></div>
+  </div>
+
+  <!-- ABOUT VIEW -->
+  <div id="t-view-about" class="t-view">
+    <div class="t-about-page" style="padding-top:24px;">
+      <h2>About Pride Index</h2>
+      <p>Pride Index is an open data tracker monitoring the state of LGBT+ rights and social acceptance across 65 countries. It aggregates data from international human rights organizations, government sources, and academic research to produce a composite acceptance score for each country.</p>
+      <div class="t-methodology">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:#9e9b94;font-weight:500;margin-bottom:10px;">Scoring methodology</div>
+        <p style="margin-bottom:10px;font-size:13px;">Each country receives a score from 0–100 based on five equally-weighted rights indicators, plus a social acceptance bonus component.</p>
+        <div class="t-score-bd">
+          <div class="t-score-item"><div class="t-score-item-label">Legal status</div><div class="t-score-item-pts">20pts</div></div>
+          <div class="t-score-item"><div class="t-score-item-label">Marriage rights</div><div class="t-score-item-pts">20pts</div></div>
+          <div class="t-score-item"><div class="t-score-item-label">Adoption rights</div><div class="t-score-item-pts">20pts</div></div>
+          <div class="t-score-item"><div class="t-score-item-label">Military service</div><div class="t-score-item-pts">15pts</div></div>
+          <div class="t-score-item"><div class="t-score-item-label">Legal protections</div><div class="t-score-item-pts">25pts</div></div>
+        </div>
+      </div>
+      <h2>Categories</h2>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#111118;border-radius:6px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="width:10px;height:10px;border-radius:50%;background:#00c9a0;flex-shrink:0;"></span>
+          <div><strong style="color:#00c9a0;">Very accepting</strong> <span style="color:#9e9b94;font-size:12px;">(75–100%) — Full or near-full rights with strong social acceptance</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#111118;border-radius:6px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="width:10px;height:10px;border-radius:50%;background:#f5a623;flex-shrink:0;"></span>
+          <div><strong style="color:#f5a623;">Partly accepting</strong> <span style="color:#9e9b94;font-size:12px;">(50–74%) — Some legal rights, inconsistent protections</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#111118;border-radius:6px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="width:10px;height:10px;border-radius:50%;background:#e86334;flex-shrink:0;"></span>
+          <div><strong style="color:#e86334;">Limited rights</strong> <span style="color:#9e9b94;font-size:12px;">(20–49%) — Basic legal tolerance but few formal rights</span></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;padding:10px;background:#111118;border-radius:6px;border:1px solid rgba(255,255,255,0.07);">
+          <span style="width:10px;height:10px;border-radius:50%;background:#e8424e;flex-shrink:0;"></span>
+          <div><strong style="color:#e8424e;">Hostile</strong> <span style="color:#9e9b94;font-size:12px;">(0–19%) — Criminalization or active state persecution</span></div>
+        </div>
+      </div>
+      <p style="font-size:12px;">Data is updated annually. This tool is for educational and advocacy purposes.</p>
     </div>
-  </main>
-
-  <!-- RIGHT: ACTIVITY + MARKET -->
-  <aside class="panel">
-    <div class="panel-title">📜 Kingdom Feed</div>
-    <div id="activity-feed"></div>
-
-    <div class="panel-title" style="margin-top:1rem;">📊 Market Prices</div>
-    <div id="market-rows"></div>
-  </aside>
-</div>
-
-<!-- MARKET TAB (hidden by default) -->
-<div id="main-market" style="display:none; padding:1.5rem;">
-  <h2 style="font-family:'Cinzel',serif; color:var(--gold); letter-spacing:0.2em; margin-bottom:1rem;">GRAND BAZAAR</h2>
-  <p style="color:var(--muted); margin-bottom:1.5rem; font-style:italic;">Trade goods, resources, and agent contracts across the realm. All trades are recorded on-chain.</p>
-  <div id="market-full"></div>
-</div>
-
-<!-- AGENTS TAB (hidden by default) -->
-<div id="main-agents" style="display:none; padding:1.5rem;">
-  <h2 style="font-family:'Cinzel',serif; color:var(--gold); letter-spacing:0.2em; margin-bottom:1rem;">AGENTS OF THE REALM</h2>
-  <div id="agents-full-list"></div>
-</div>
-
-<!-- COUNCIL TAB (hidden by default) -->
-<div id="main-council" style="display:none; padding:1.5rem;">
-  <h2 style="font-family:'Cinzel',serif; color:var(--gold); letter-spacing:0.2em; margin-bottom:1rem;">SOVEREIGN COUNCIL</h2>
-  <div id="council-content"></div>
-</div>
-
-<!-- TICKER -->
-<div class="event-panel">
-  <span style="font-family:'Cinzel',serif; font-size:0.65rem; color:var(--gold); letter-spacing:0.1em; white-space:nowrap;">REALM NEWS</span>
-  <div class="event-ticker">
-    <span class="ticker-inner" id="ticker-text"></span>
   </div>
 </div>
 
-</div><!-- .app -->
+<!-- ══════════════════════════════════
+     GAME PANE
+══════════════════════════════════ -->
+<div id="pane-game" class="app-pane">
 
-<!-- MODAL -->
-<div class="modal-overlay" id="modal">
-  <div class="modal">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div class="modal-title" id="modal-title">Action</div>
-    <div class="modal-body" id="modal-body"></div>
-    <div class="modal-actions" id="modal-actions"></div>
+  <!-- INTRO -->
+  <div id="g-screen-intro" class="g-screen">
+    <div class="g-intro-bg"></div>
+    <div style="position:relative;z-index:1;text-align:center;padding:20px;">
+      <div class="g-pixel-title">
+        <span class="r1">P</span><span class="r2">R</span><span class="r3">I</span><span class="r4">D</span><span class="r5">E</span>&nbsp;<span class="r6">W</span><span class="r1">A</span><span class="r2">R</span><span class="r3">S</span>
+      </div>
+      <div style="font-family:'Press Start 2P',monospace;font-size:9px;color:#9e96b4;margin-bottom:5px;">WORLD RPG</div>
+      <p class="g-sub-title">Conquer countries · Loot gear · Level up</p>
+      <p style="font-size:11px;color:#4a4260;margin-bottom:28px;max-width:480px;margin-left:auto;margin-right:auto;">Choose your faction and battle across the world map. Capture countries, collect loot, and dominate the globe. A fictional RPG!</p>
+      <div class="g-faction-pick">
+        <div class="g-faction-card rainbow" onclick="gChooseFaction('rainbow')">
+          <span class="g-faction-icon">🌈</span>
+          <div class="g-faction-name rainbow">Rainbow Alliance</div>
+          <p class="g-faction-desc">Masters of color magic & rainbow bombs. High burst damage, quick strikes.</p>
+          <div class="g-faction-stats">
+            <div class="g-fstat"><div class="g-fstat-label">ATK</div><div class="g-fstat-val" style="color:#ff9f43;">92</div></div>
+            <div class="g-fstat"><div class="g-fstat-label">DEF</div><div class="g-fstat-val" style="color:#0be881;">68</div></div>
+            <div class="g-fstat"><div class="g-fstat-label">SPD</div><div class="g-fstat-val" style="color:#18dcff;">85</div></div>
+            <div class="g-fstat"><div class="g-fstat-label">MAG</div><div class="g-fstat-val" style="color:#ff78ff;">90</div></div>
+          </div>
+        </div>
+        <div class="g-faction-card straight" onclick="gChooseFaction('straight')">
+          <span class="g-faction-icon">⚔️</span>
+          <div class="g-faction-name straight">Order of Tradition</div>
+          <p class="g-faction-desc">Heavy armor, siege weapons & iron bombs. High defense, devastating hits.</p>
+          <div class="g-faction-stats">
+            <div class="g-fstat"><div class="g-fstat-label">ATK</div><div class="g-fstat-val" style="color:#ff9f43;">78</div></div>
+            <div class="g-fstat"><div class="g-fstat-label">DEF</div><div class="g-fstat-val" style="color:#0be881;">95</div></div>
+            <div class="g-fstat"><div class="g-fstat-label">SPD</div><div class="g-fstat-val" style="color:#18dcff;">55</div></div>
+            <div class="g-fstat"><div class="g-fstat-label">MAG</div><div class="g-fstat-val" style="color:#ff78ff;">62</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
+
+  <!-- GAME SCREEN -->
+  <div id="g-screen-game" class="g-screen hidden">
+    <div id="g-topbar">
+      <div class="g-tb-faction" id="g-tb-faction-name"></div>
+      <div class="g-tb-level">
+        <div class="g-tb-lvl" id="g-tb-level">LV 1</div>
+        <div>
+          <div style="font-size:7px;color:#4a4260;margin-bottom:2px;">EXP</div>
+          <div class="g-exp-wrap"><div class="g-exp-bar" id="g-exp-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="g-tb-hp">
+        <span style="font-size:9px;color:#4a4260;">HP</span>
+        <div class="g-hp-wrap"><div class="g-hp-bar" id="g-hp-bar"></div></div>
+        <span id="g-hp-text" style="font-size:9px;font-weight:700;min-width:55px;"></span>
+      </div>
+      <div class="g-tb-spacer"></div>
+      <div class="g-tb-gold">🪙 <span id="g-tb-gold-val">0</span></div>
+      <div style="font-size:9px;color:#9e96b4;">Countries: <span id="g-tb-countries" style="color:#f5c518;font-weight:700;">0</span></div>
+      <button class="g-tb-btn" onclick="gShowToast('Click items in inventory to use them!')">🎒 Bag</button>
+      <button class="g-tb-btn" onclick="gRestartGame()" style="color:#4a4260;">↩ Menu</button>
+    </div>
+    <div id="g-sidebar-left">
+      <div class="g-sl-section">
+        <div class="g-sl-label">Abilities</div>
+        <div id="g-ability-row" style="display:flex;flex-direction:column;gap:5px;"></div>
+      </div>
+      <div class="g-sl-section">
+        <div class="g-sl-label">Your Stats</div>
+        <div class="g-stat-grid" id="g-stat-grid"></div>
+      </div>
+      <div class="g-sl-section" style="flex:1;overflow:hidden;display:flex;flex-direction:column;">
+        <div class="g-sl-label">Leaderboard</div>
+        <div class="g-score-list" id="g-score-list"></div>
+      </div>
+    </div>
+    <div id="g-map-area">
+      <div id="g-map-wrap"></div>
+      <div id="g-ctip"></div>
+    </div>
+    <div id="g-sidebar-right">
+      <div class="g-sl-section"><div class="g-sl-label">Battle Log</div></div>
+      <div class="g-battle-log" id="g-battle-log"></div>
+      <div class="g-inv-panel">
+        <div class="g-sl-label">Inventory</div>
+        <div class="g-inv-grid" id="g-inv-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BATTLE MODAL -->
+  <div id="g-battle-modal" class="hidden">
+    <div class="g-battle-box" id="g-battle-box"></div>
+  </div>
+
+  <!-- LEVEL UP -->
+  <div id="g-levelup-flash"><div class="g-levelup-text">LEVEL UP!</div></div>
+
+  <!-- TOAST -->
+  <div id="g-toast"></div>
 </div>
 
-<!-- NOTIFICATIONS -->
-<div id="notifications"></div>
-
+<!-- ══════════════════════════════════
+     SCRIPTS
+══════════════════════════════════ -->
 <script>
-// ===== GAME STATE =====
-const state = {
-  gold: 2840, power: 1240, grain: 560, stone: 340,
-  influence: 3120, plots: 3, subAgents: 7,
-  rank: 'Lord', cycle: 'Dawn', turn: 144,
-  walletConnected: false,
-  mapMode: 'view',
-  selectedAgent: null,
-  gameTime: 0,
+// ── APP SWITCHER
+let trackerMapBuilt = false;
+function switchApp(which, btn) {
+  document.querySelectorAll('.app-pane').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.super-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('pane-'+which).classList.add('active');
+  btn.classList.add('active');
+  if(which==='tracker' && !trackerMapBuilt){
+    setTimeout(()=>{ tBuildMap(); trackerMapBuilt=true; },100);
+  }
+}
+
+// ════════════════════════════════════════════════════
+//  TRACKER
+// ════════════════════════════════════════════════════
+const T_DATA = [
+  {name:"Canada",iso:"124",score:97,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Americas"},
+  {name:"Netherlands",iso:"528",score:96,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Iceland",iso:"352",score:96,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Belgium",iso:"056",score:95,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Norway",iso:"578",score:95,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Sweden",iso:"752",score:95,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Denmark",iso:"208",score:94,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Finland",iso:"246",score:93,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Malta",iso:"470",score:90,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Luxembourg",iso:"442",score:90,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"France",iso:"250",score:90,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"United Kingdom",iso:"826",score:89,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Ireland",iso:"372",score:88,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Germany",iso:"276",score:88,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Spain",iso:"724",score:88,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Portugal",iso:"620",score:87,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"New Zealand",iso:"554",score:86,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Oceania"},
+  {name:"Australia",iso:"036",score:85,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Oceania"},
+  {name:"Switzerland",iso:"756",score:82,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"Uruguay",iso:"858",score:80,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Americas"},
+  {name:"United States",iso:"840",score:77,legal:true,marriage:true,adoption:true,military:true,protection:false,region:"Americas"},
+  {name:"Austria",iso:"040",score:75,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Europe"},
+  {name:"South Africa",iso:"710",score:72,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Africa"},
+  {name:"Israel",iso:"376",score:70,legal:true,marriage:false,adoption:false,military:true,protection:true,region:"Asia"},
+  {name:"Costa Rica",iso:"188",score:70,legal:true,marriage:true,adoption:false,military:false,protection:true,region:"Americas"},
+  {name:"Taiwan",iso:"158",score:68,legal:true,marriage:true,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Czech Republic",iso:"203",score:65,legal:true,marriage:false,adoption:false,military:true,protection:true,region:"Europe"},
+  {name:"Argentina",iso:"032",score:78,legal:true,marriage:true,adoption:true,military:true,protection:true,region:"Americas"},
+  {name:"Cuba",iso:"192",score:62,legal:true,marriage:true,adoption:true,military:false,protection:false,region:"Americas"},
+  {name:"Brazil",iso:"076",score:62,legal:true,marriage:true,adoption:true,military:false,protection:true,region:"Americas"},
+  {name:"Colombia",iso:"170",score:60,legal:true,marriage:true,adoption:false,military:false,protection:true,region:"Americas"},
+  {name:"Italy",iso:"380",score:55,legal:true,marriage:false,adoption:false,military:true,protection:true,region:"Europe"},
+  {name:"Mexico",iso:"484",score:58,legal:true,marriage:false,adoption:false,military:false,protection:true,region:"Americas"},
+  {name:"Chile",iso:"152",score:55,legal:true,marriage:false,adoption:false,military:false,protection:true,region:"Americas"},
+  {name:"Ecuador",iso:"218",score:45,legal:true,marriage:true,adoption:false,military:false,protection:true,region:"Americas"},
+  {name:"Greece",iso:"300",score:48,legal:true,marriage:false,adoption:false,military:false,protection:true,region:"Europe"},
+  {name:"Thailand",iso:"764",score:44,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Japan",iso:"392",score:42,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Botswana",iso:"072",score:32,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Africa"},
+  {name:"Philippines",iso:"608",score:32,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"India",iso:"356",score:30,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"South Korea",iso:"410",score:28,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Vietnam",iso:"704",score:22,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Peru",iso:"604",score:22,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Americas"},
+  {name:"Ukraine",iso:"804",score:20,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Europe"},
+  {name:"Singapore",iso:"702",score:18,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Poland",iso:"616",score:18,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Europe"},
+  {name:"China",iso:"156",score:15,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Venezuela",iso:"862",score:15,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Americas"},
+  {name:"Hungary",iso:"348",score:12,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Europe"},
+  {name:"Turkey",iso:"792",score:10,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Europe"},
+  {name:"Lebanon",iso:"422",score:8,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Indonesia",iso:"360",score:8,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Russia",iso:"643",score:5,legal:true,marriage:false,adoption:false,military:false,protection:false,region:"Europe"},
+  {name:"Malaysia",iso:"458",score:4,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Morocco",iso:"504",score:2,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Africa"},
+  {name:"Tunisia",iso:"788",score:3,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Africa"},
+  {name:"Egypt",iso:"818",score:3,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Africa"},
+  {name:"Kenya",iso:"404",score:3,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Africa"},
+  {name:"Ghana",iso:"288",score:3,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Africa"},
+  {name:"Ethiopia",iso:"231",score:2,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Africa"},
+  {name:"Nigeria",iso:"566",score:2,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Africa"},
+  {name:"Iran",iso:"364",score:1,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Saudi Arabia",iso:"682",score:1,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Pakistan",iso:"586",score:2,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+  {name:"Uganda",iso:"800",score:1,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Africa"},
+  {name:"Afghanistan",iso:"004",score:1,legal:false,marriage:false,adoption:false,military:false,protection:false,region:"Asia"},
+];
+const T_ISO_COORDS={
+  "124":[55,-96],"528":[52.3,5.3],"352":[65,-18],"056":[50.8,4.5],"578":[60.5,8.2],
+  "752":[62,15],"208":[56,10],"246":[61,26],"250":[46,2],"826":[54,-3],"276":[51,10],
+  "724":[40,-4],"620":[39,-8],"840":[38,-97],"036":[-25,133],"554":[-41,174],"710":[-29,25],
+  "032":[-34,-64],"076":[-10,-55],"484":[23,-102],"152":[-30,-71],"170":[4,-72],"858":[-33,-56],
+  "392":[36,138],"410":[36,128],"158":[24,121],"764":[15,101],"608":[13,122],"356":[20,77],
+  "156":[35,105],"643":[60,100],"792":[39,35],"818":[26,30],"566":[10,8],"404":[1,38],
+  "231":[9,40],"288":[8,-1],"364":[32,53],"682":[24,45],"586":[30,70],"360":[-5,120],
+  "458":[2.5,112],"380":[42,12],"756":[47,8],"040":[47,14],"372":[53,-8],"300":[39,22],
+  "616":[52,20],"348":[47,19],"804":[49,31],"203":[50,15],"192":[21,-80],"188":[10,-84],
+  "604":[-10,-76],"862":[8,-66],"218":[-2,-77],"504":[32,-5],"788":[34,9],"072":[-22,24],
+  "800":[1,32],"004":[33,65],"376":[31,35],"422":[34,36],"704":[16,108],"702":[1.4,103.8],
+  "470":[35.9,14.5],"442":[49.7,6.2]
+};
+const T_CAT_COLORS={
+  "Very accepting":{fill:"#00c9a0",stroke:"#00a882"},
+  "Partly accepting":{fill:"#f5a623",stroke:"#d4891c"},
+  "Limited rights":{fill:"#e86334",stroke:"#c9522a"},
+  "Hostile":{fill:"#e8424e",stroke:"#c83540"},
+};
+const T_CATS=["Very accepting","Partly accepting","Limited rights","Hostile"];
+const tGetCat=s=>s>=75?"Very accepting":s>=50?"Partly accepting":s>=20?"Limited rights":"Hostile";
+const tGetCatCol=s=>T_CAT_COLORS[tGetCat(s)].fill;
+
+let tActiveFilter=null,tSearchQ="",tSortMode="name",tDotsLayer=null;
+
+function tSwitchView(v,btn){
+  document.querySelectorAll('.t-view').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.t-snav-btn').forEach(x=>x.classList.remove('active'));
+  document.getElementById('t-view-'+v).classList.add('active');
+  btn.classList.add('active');
+  if(v==='stats') tRenderStats();
+}
+function tRenderMetrics(){
+  const n=T_DATA.length,avg=Math.round(T_DATA.reduce((a,b)=>a+b.score,0)/n);
+  const marry=T_DATA.filter(d=>d.marriage).length,prot=T_DATA.filter(d=>d.protection).length;
+  const hostile=T_DATA.filter(d=>d.score<20).length;
+  const items=[
+    {label:"Countries",val:n,pct:100,color:"#e8426a"},
+    {label:"Average score",val:avg+"%",pct:avg,color:"#00c9a0"},
+    {label:"Marriage rights",val:marry,pct:Math.round(marry/n*100),color:"#f5a623"},
+    {label:"Legal protections",val:prot,pct:Math.round(prot/n*100),color:"#00b0e8"},
+    {label:"Hostile countries",val:hostile,pct:Math.round(hostile/n*100),color:"#e8424e"},
+  ];
+  document.getElementById('t-metrics-row').innerHTML=items.map(m=>`
+    <div class="t-metric">
+      <div class="t-mlabel">${m.label}</div>
+      <div class="t-mval">${m.val}</div>
+      <div class="t-mbar" style="width:${m.pct}%;background:${m.color};"></div>
+    </div>`).join('');
+}
+function tRenderLegend(){
+  document.getElementById('t-legend-row').innerHTML=T_CATS.map(cat=>{
+    const c=T_CAT_COLORS[cat],isA=tActiveFilter===cat;
+    return `<div class="t-legend-item ${isA?'active':''}" onclick="tToggleFilter('${cat}')">
+      <span class="t-legend-dot" style="background:${c.fill};"></span>${cat}</div>`;
+  }).join('');
+}
+function tToggleFilter(cat){
+  tActiveFilter=tActiveFilter===cat?null:cat;
+  tRenderLegend();tRenderDots();tRenderList();
+}
+function tRenderList(){
+  let rows=T_DATA.filter(d=>(!tActiveFilter||tGetCat(d.score)===tActiveFilter)&&(!tSearchQ||d.name.toLowerCase().includes(tSearchQ.toLowerCase())));
+  if(tSortMode==='score-desc') rows.sort((a,b)=>b.score-a.score);
+  else if(tSortMode==='score-asc') rows.sort((a,b)=>a.score-b.score);
+  else rows.sort((a,b)=>a.name.localeCompare(b.name));
+  document.getElementById('t-count-label').textContent=rows.length+' countries';
+  const keys=['legal','marriage','adoption','military','protection'];
+  document.getElementById('t-country-list').innerHTML=rows.map(d=>`
+    <div class="t-crow">
+      <div class="t-crname">${d.name}</div>
+      <div class="t-crbar-wrap"><div class="t-crbar" style="width:${d.score}%;background:${tGetCatCol(d.score)};"></div></div>
+      <div class="t-crscore" style="color:${tGetCatCol(d.score)};">${d.score}%</div>
+      <div class="t-crdots">${keys.map(k=>`<span class="t-crdot" style="background:${d[k]?'#00c9a0':'rgba(255,255,255,0.1)'};"></span>`).join('')}</div>
+    </div>`).join('')||`<div style="padding:20px;color:#5c5a56;font-size:12px;text-align:center;">No countries match</div>`;
+}
+function tOnSearch(){tSearchQ=document.getElementById('t-search').value;tRenderList();tRenderDots();}
+function tSetSort(m,btn){
+  tSortMode=m;
+  document.querySelectorAll('.t-sort-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');tRenderList();
+}
+function tRenderRegionChart(){
+  const regions={};
+  T_DATA.forEach(d=>{if(!regions[d.region]) regions[d.region]={sum:0,count:0};regions[d.region].sum+=d.score;regions[d.region].count++;});
+  const sorted=Object.entries(regions).map(([r,v])=>({region:r,avg:Math.round(v.sum/v.count)})).sort((a,b)=>b.avg-a.avg);
+  const colors=['#00c9a0','#e8426a','#f5a623','#00b0e8','#a080ff','#e86334'];
+  document.getElementById('t-region-chart').innerHTML=sorted.map((r,i)=>`
+    <div class="t-rrow">
+      <div class="t-rlabel"><span>${r.region}</span><span style="color:${colors[i%colors.length]};font-weight:500;">${r.avg}%</span></div>
+      <div class="t-rbar-bg"><div class="t-rbar-fill" style="width:${r.avg}%;background:${colors[i%colors.length]};"></div></div>
+    </div>`).join('');
+}
+function tBuildMap(){
+  T_DATA.forEach(d=>{d._coords=T_ISO_COORDS[d.iso];});
+  const wrap=document.getElementById('t-map-svg-wrap');
+  const W=Math.max(wrap.offsetWidth||700,400),H=Math.round(W*0.5);
+  const svg=d3.select('#t-map-svg-wrap').append('svg').attr('viewBox',`0 0 ${W} ${H}`).attr('width','100%');
+  const proj=d3.geoNaturalEarth1().scale(W/6.2).translate([W/2,H/2]);
+  const pathGen=d3.geoPath(proj);
+  d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(world=>{
+    svg.append('g').selectAll('path').data(topojson.feature(world,world.objects.countries).features).join('path')
+      .attr('d',pathGen).attr('fill','#1a1a25').attr('stroke','rgba(255,255,255,0.06)').attr('stroke-width',0.5);
+    T_DATA.forEach(d=>{if(!d._coords) return;const xy=proj([d._coords[1],d._coords[0]]);if(xy) d._xy=xy;});
+    tDotsLayer=svg.append('g');tRenderDots();
+  });
+}
+function tRenderDots(){
+  if(!tDotsLayer) return;
+  tDotsLayer.selectAll('*').remove();
+  const filtered=T_DATA.filter(d=>(!tActiveFilter||tGetCat(d.score)===tActiveFilter)&&(!tSearchQ||d.name.toLowerCase().includes(tSearchQ.toLowerCase())));
+  filtered.forEach(d=>{
+    if(!d._xy) return;
+    const c=T_CAT_COLORS[tGetCat(d.score)];
+    const g=tDotsLayer.append('g').attr('transform',`translate(${d._xy[0]},${d._xy[1]})`).style('cursor','pointer');
+    g.append('circle').attr('r',7).attr('fill',c.fill).attr('stroke',c.stroke).attr('stroke-width',1.5).attr('opacity',0.9);
+    g.append('text').attr('y',-10).attr('text-anchor','middle').attr('font-size','8px').attr('fill','#fff').attr('font-weight','600').attr('font-family','Syne,sans-serif').text(d.score+'%');
+    g.on('mouseover',function(ev){
+      const wrap=document.getElementById('t-map-svg-wrap'),rect=wrap.getBoundingClientRect();
+      const tt=document.getElementById('t-tooltip');
+      const keys=['marriage','adoption','military','protection'],labels=['Marriage','Adoption','Military','Protection'];
+      tt.innerHTML=`<div class="tt-name">${d.name}</div><div class="tt-region">${d.region}</div>
+        <div class="tt-score-row"><div class="tt-score" style="color:${c.fill};">${d.score}%</div>
+        <div><div class="tt-cat" style="color:${c.fill};">${tGetCat(d.score)}</div><div style="font-size:9px;color:#5c5a56;">Acceptance score</div></div></div>
+        <div class="tt-badges">${keys.map((k,i)=>`<span class="tt-badge ${d[k]?'yes':'no'}">${labels[i]}</span>`).join('')}</div>`;
+      tt.style.display='block';tt.style.left=Math.min(ev.clientX-rect.left+12,wrap.offsetWidth-210)+'px';tt.style.top=Math.max(ev.clientY-rect.top-70,4)+'px';
+    }).on('mouseout',()=>{document.getElementById('t-tooltip').style.display='none';});
+  });
+}
+function tRenderStats(){
+  const n=T_DATA.length,scores=T_DATA.map(d=>d.score).sort((a,b)=>a-b);
+  const avg=Math.round(scores.reduce((a,b)=>a+b,0)/n),median=scores[Math.floor(n/2)];
+  const top=[...T_DATA].sort((a,b)=>b.score-a.score)[0],bottom=[...T_DATA].sort((a,b)=>a.score-b.score)[0];
+  document.getElementById('t-stats-grid').innerHTML=[
+    {label:"Average score",val:avg+'%',sub:"global mean",color:"#00c9a0"},
+    {label:"Median score",val:median+'%',sub:"50th percentile",color:"#00b0e8"},
+    {label:"Highest ranked",val:top.name,sub:top.score+'% — Very accepting',color:"#f5a623"},
+    {label:"Lowest ranked",val:bottom.name,sub:bottom.score+'% — Hostile',color:"#e8424e"},
+    {label:"Very accepting",val:T_DATA.filter(d=>d.score>=75).length,sub:Math.round(T_DATA.filter(d=>d.score>=75).length/n*100)+'% of countries',color:"#00c9a0"},
+    {label:"Hostile",val:T_DATA.filter(d=>d.score<20).length,sub:Math.round(T_DATA.filter(d=>d.score<20).length/n*100)+'% of countries',color:"#e8424e"},
+  ].map(s=>`<div class="t-stat-card"><div class="t-sc-label">${s.label}</div><div class="t-sc-val" style="color:${s.color};">${s.val}</div><div class="t-sc-sub">${s.sub}</div></div>`).join('');
+  const buckets=[{l:'0–19',c:0},{l:'20–39',c:0},{l:'40–59',c:0},{l:'60–79',c:0},{l:'80–100',c:0}];
+  const bc=['#e8424e','#e86334','#f5a623','#00b0e8','#00c9a0'];
+  T_DATA.forEach(d=>{if(d.score<20)buckets[0].c++;else if(d.score<40)buckets[1].c++;else if(d.score<60)buckets[2].c++;else if(d.score<80)buckets[3].c++;else buckets[4].c++;});
+  const maxB=Math.max(...buckets.map(b=>b.c));
+  document.getElementById('t-dist-chart').innerHTML=`<div style="display:flex;align-items:flex-end;gap:8px;height:110px;">${buckets.map((b,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;"><div style="font-size:10px;color:#9e9b94;">${b.c}</div><div style="width:100%;background:${bc[i]};border-radius:4px 4px 0 0;height:${Math.round(b.c/maxB*85)}px;"></div><div style="font-size:10px;color:#5c5a56;">${b.l}</div></div>`).join('')}</div>`;
+  const rights=[{icon:'⚖️',label:'Legal status',key:'legal'},{icon:'💍',label:'Marriage',key:'marriage'},{icon:'👨‍👩‍👧',label:'Adoption',key:'adoption'},{icon:'🎖️',label:'Military',key:'military'},{icon:'🛡️',label:'Protections',key:'protection'}];
+  document.getElementById('t-rights-grid').innerHTML=rights.map(r=>{const cnt=T_DATA.filter(d=>d[r.key]).length,pct=Math.round(cnt/n*100);return`<div class="t-rights-block"><div class="t-rb-icon">${r.icon}</div><div class="t-rb-num" style="color:#00c9a0;">${cnt}</div><div class="t-rb-label">${r.label}</div><div class="t-rb-pct">${pct}%</div></div>`;}).join('');
+}
+
+// init tracker
+tRenderMetrics();tRenderLegend();tRenderList();tRenderRegionChart();
+setTimeout(()=>{tBuildMap();trackerMapBuilt=true;},300);
+
+
+// ════════════════════════════════════════════════════
+//  GAME
+// ════════════════════════════════════════════════════
+const G_COUNTRIES=[
+  {id:"124",name:"Canada",region:"Americas"},{id:"840",name:"USA",region:"Americas"},
+  {id:"484",name:"Mexico",region:"Americas"},{id:"076",name:"Brazil",region:"Americas"},
+  {id:"032",name:"Argentina",region:"Americas"},{id:"170",name:"Colombia",region:"Americas"},
+  {id:"604",name:"Peru",region:"Americas"},{id:"858",name:"Uruguay",region:"Americas"},
+  {id:"036",name:"Australia",region:"Oceania"},{id:"554",name:"New Zealand",region:"Oceania"},
+  {id:"826",name:"UK",region:"Europe"},{id:"276",name:"Germany",region:"Europe"},
+  {id:"250",name:"France",region:"Europe"},{id:"724",name:"Spain",region:"Europe"},
+  {id:"380",name:"Italy",region:"Europe"},{id:"528",name:"Netherlands",region:"Europe"},
+  {id:"752",name:"Sweden",region:"Europe"},{id:"578",name:"Norway",region:"Europe"},
+  {id:"208",name:"Denmark",region:"Europe"},{id:"246",name:"Finland",region:"Europe"},
+  {id:"616",name:"Poland",region:"Europe"},{id:"643",name:"Russia",region:"Europe"},
+  {id:"792",name:"Turkey",region:"Europe"},{id:"804",name:"Ukraine",region:"Europe"},
+  {id:"300",name:"Greece",region:"Europe"},{id:"620",name:"Portugal",region:"Europe"},
+  {id:"372",name:"Ireland",region:"Europe"},{id:"348",name:"Hungary",region:"Europe"},
+  {id:"203",name:"Czech Rep.",region:"Europe"},{id:"040",name:"Austria",region:"Europe"},
+  {id:"756",name:"Switzerland",region:"Europe"},{id:"442",name:"Luxembourg",region:"Europe"},
+  {id:"470",name:"Malta",region:"Europe"},
+  {id:"356",name:"India",region:"Asia"},{id:"156",name:"China",region:"Asia"},
+  {id:"392",name:"Japan",region:"Asia"},{id:"410",name:"S.Korea",region:"Asia"},
+  {id:"158",name:"Taiwan",region:"Asia"},{id:"764",name:"Thailand",region:"Asia"},
+  {id:"608",name:"Philippines",region:"Asia"},{id:"360",name:"Indonesia",region:"Asia"},
+  {id:"458",name:"Malaysia",region:"Asia"},{id:"702",name:"Singapore",region:"Asia"},
+  {id:"704",name:"Vietnam",region:"Asia"},{id:"364",name:"Iran",region:"Asia"},
+  {id:"586",name:"Pakistan",region:"Asia"},{id:"682",name:"Saudi Arabia",region:"Asia"},
+  {id:"376",name:"Israel",region:"Asia"},{id:"422",name:"Lebanon",region:"Asia"},
+  {id:"004",name:"Afghanistan",region:"Asia"},
+  {id:"710",name:"S.Africa",region:"Africa"},{id:"566",name:"Nigeria",region:"Africa"},
+  {id:"818",name:"Egypt",region:"Africa"},{id:"404",name:"Kenya",region:"Africa"},
+  {id:"231",name:"Ethiopia",region:"Africa"},{id:"288",name:"Ghana",region:"Africa"},
+  {id:"504",name:"Morocco",region:"Africa"},{id:"788",name:"Tunisia",region:"Africa"},
+  {id:"072",name:"Botswana",region:"Africa"},{id:"800",name:"Uganda",region:"Africa"},
+];
+const G_RAINBOW_AB=[
+  {id:'bomb',name:'Rainbow Bomb',icon:'💣',desc:'Drops a rainbow bomb',dmgMin:30,dmgMax:60,cd:0,maxCd:3,special:null},
+  {id:'prism',name:'Prism Burst',icon:'🌈',desc:'Scatter-shot',dmgMin:20,dmgMax:80,cd:0,maxCd:4,special:'scatter'},
+  {id:'heal',name:'Unicorn Heal',icon:'🦄',desc:'Restore HP',dmgMin:0,dmgMax:0,cd:0,maxCd:5,special:'heal'},
+  {id:'glitter',name:'Glitter Nuke',icon:'✨',desc:'Massive magic hit',dmgMin:60,dmgMax:100,cd:0,maxCd:7,special:'nuke'},
+];
+const G_STRAIGHT_AB=[
+  {id:'iron',name:'Iron Bomb',icon:'💣',desc:'Heavy iron bomb',dmgMin:35,dmgMax:55,cd:0,maxCd:3,special:null},
+  {id:'siege',name:'Siege Cannon',icon:'💥',desc:'Piercing shot',dmgMin:25,dmgMax:75,cd:0,maxCd:4,special:'pierce'},
+  {id:'shield',name:'Iron Shield',icon:'🛡️',desc:'Block next hit',dmgMin:0,dmgMax:0,cd:0,maxCd:5,special:'shield'},
+  {id:'warcry',name:'War Cry',icon:'⚔️',desc:'Massive bonus damage',dmgMin:65,dmgMax:95,cd:0,maxCd:7,special:'nuke'},
+];
+const G_LOOT=[
+  {id:'hp_pot',name:'HP Potion',icon:'🧪',rarity:'common',effect:'heal',val:40},
+  {id:'dmg_scroll',name:'Dmg Scroll',icon:'📜',rarity:'common',effect:'dmg_boost',val:10},
+  {id:'gold_bag',name:'Gold Bag',icon:'💰',rarity:'rare',effect:'gold',val:200},
+  {id:'enchant',name:'Enchant Stone',icon:'💎',rarity:'rare',effect:'perm_atk',val:5},
+  {id:'rainbow_gem',name:'Rainbow Gem',icon:'💠',rarity:'epic',effect:'perm_all',val:3},
+  {id:'ancient_bomb',name:'Ancient Bomb',icon:'🔮',rarity:'legendary',effect:'nuke_charge',val:1},
+  {id:'armor',name:'Mythic Armor',icon:'🛡️',rarity:'epic',effect:'perm_def',val:8},
+  {id:'crown',name:'Victory Crown',icon:'👑',rarity:'legendary',effect:'gold',val:1000},
+];
+const G_ISO_COORDS={
+  "124":[55,-96],"840":[38,-97],"484":[23,-102],"076":[-10,-55],"032":[-34,-64],
+  "170":[4,-72],"604":[-10,-76],"858":[-33,-56],"036":[-25,133],"554":[-41,174],
+  "826":[54,-3],"276":[51,10],"250":[46,2],"724":[40,-4],"380":[42,12],"528":[52.3,5.3],
+  "752":[62,15],"578":[60.5,8.2],"208":[56,10],"246":[61,26],"616":[52,20],"643":[60,100],
+  "792":[39,35],"804":[49,31],"300":[39,22],"620":[39,-8],"372":[53,-8],"348":[47,19],
+  "203":[50,15],"040":[47,14],"756":[47,8],"442":[49.7,6.2],"470":[35.9,14.5],
+  "356":[20,77],"156":[35,105],"392":[36,138],"410":[36,128],"158":[24,121],
+  "764":[15,101],"608":[13,122],"360":[-5,120],"458":[2.5,112],"702":[1.4,103.8],
+  "704":[16,108],"364":[32,53],"586":[30,70],"682":[24,45],"376":[31,35],
+  "422":[34,36],"004":[33,65],"710":[-29,25],"566":[10,8],"818":[26,30],
+  "404":[1,38],"231":[9,40],"288":[8,-1],"504":[32,-5],"788":[34,9],
+  "072":[-22,24],"800":[1,32],
 };
 
-// ===== AGENT DATA =====
-const myAgents = [
-  { id: 1, name: 'Aldric the Bold', title: 'Master of Coin', rank: 'lord', emoji: '👑', power: 340, gold: 800, loyalty: 95, task: 'Collecting tribute', x: 0.35, y: 0.42 },
-  { id: 2, name: 'Sera Nightwhisper', title: 'Spymaster', rank: 'vassal', emoji: '🗡️', power: 220, gold: 340, loyalty: 88, task: 'Scouting rogue agents', x: 0.55, y: 0.33 },
-  { id: 3, name: 'Theron the Forge', title: 'Master of Works', rank: 'vassal', emoji: '⚒️', power: 180, gold: 210, loyalty: 92, task: 'Building fortifications', x: 0.28, y: 0.58 },
-];
+let G={faction:null,level:1,exp:0,expNext:100,hp:200,maxHp:200,atk:80,def:60,spd:70,mag:70,gold:50,countries:{},inventory:[],abilities:[],selectedAbility:0,shieldActive:false};
+let gCurrentBattle=null,gSvgEl=null,gDotsLayer=null;
 
-const nearbyAgents = [
-  { id: 10, name: 'Vex Ironmaw', title: 'Rogue Warlord', rank: 'rogue', emoji: '💀', power: 890, gold: 0, threat: 'High', x: 0.72, y: 0.25 },
-  { id: 11, name: 'Miria of the Vale', title: 'Free Trader', rank: 'serf', emoji: '🧳', power: 120, gold: 540, threat: 'None', x: 0.48, y: 0.65 },
-  { id: 12, name: 'Castellan Vor', title: 'Neutral Lord', rank: 'lord', emoji: '🏰', power: 560, gold: 1200, threat: 'Low', x: 0.62, y: 0.52 },
-];
-
-const allAgents = [...myAgents, ...nearbyAgents];
-
-const goods = [
-  { name: 'Grain', icon: '🌾', price: 12, change: +0.8, unit: 'bushel' },
-  { name: 'Stone', icon: '🪨', price: 24, change: -1.2, unit: 'block' },
-  { name: 'Iron', icon: '⚙️', price: 38, change: +3.1, unit: 'ingot' },
-  { name: 'Silk', icon: '🧵', price: 95, change: +2.4, unit: 'bolt' },
-  { name: 'Spice', icon: '🫙', price: 142, change: -5.0, unit: 'jar' },
-  { name: 'Timber', icon: '🪵', price: 18, change: +0.3, unit: 'plank' },
-  { name: 'Gold Ore', icon: '💛', price: 210, change: +8.2, unit: 'oz' },
-  { name: 'Weapons', icon: '⚔️', price: 320, change: -12.0, unit: 'set' },
-];
-
-const feedMessages = [
-  { type: 'combat', text: 'Vex Ironmaw raids the Eastern Granary — 400 grain pillaged!' },
-  { type: 'trade', text: 'Castellan Vor opens silk road through the Gilded Pass.' },
-  { type: 'recruit', text: 'Sera Nightwhisper uncovers a rogue agent cell in the Undercity.' },
-  { type: 'ascend', text: 'Agent "Lady Maren" ascends to Lord rank — controls 5 plots.' },
-  { type: 'trade', text: 'Market: Iron prices surge +15% after southern mine collapse.' },
-  { type: 'combat', text: 'Battle of Stone Ford — 3 lords vie for the central quarry.' },
-  { type: 'recruit', text: 'Free agent Miria of the Vale seeks a new sovereign.' },
-  { type: 'ascend', text: 'Grand Sovereign Edric levies war tax — all lords pay tribute.' },
-];
-
-// ===== STARFIELD =====
-const starsCanvas = document.getElementById('stars');
-const sCtx = starsCanvas.getContext('2d');
-const stars = [];
-
-function initStars() {
-  starsCanvas.width = window.innerWidth;
-  starsCanvas.height = window.innerHeight;
-  for (let i = 0; i < 200; i++) {
-    stars.push({
-      x: Math.random() * starsCanvas.width,
-      y: Math.random() * starsCanvas.height,
-      r: Math.random() * 1.2,
-      a: Math.random(),
-      da: (Math.random() - 0.5) * 0.005,
-    });
+function gChooseFaction(f){
+  G.faction=f;
+  if(f==='rainbow'){G.atk=92;G.def=68;G.spd=85;G.mag=90;G.abilities=JSON.parse(JSON.stringify(G_RAINBOW_AB));
+    document.getElementById('g-tb-faction-name').innerHTML='<span style="background:linear-gradient(90deg,#ff6b6b,#ffd32a,#0be881,#ff78ff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">🌈 RAINBOW ALLIANCE</span>';
+    document.getElementById('g-hp-bar').style.background='linear-gradient(90deg,#ff6b6b,#ff78ff)';
+  }else{G.atk=78;G.def=95;G.spd=55;G.mag=62;G.abilities=JSON.parse(JSON.stringify(G_STRAIGHT_AB));
+    document.getElementById('g-tb-faction-name').innerHTML='<span style="color:#4a90d9;">⚔️ ORDER OF TRADITION</span>';
+    document.getElementById('g-hp-bar').style.background='linear-gradient(90deg,#4a90d9,#c9c9c9)';
   }
+  G_COUNTRIES.forEach(c=>{G.countries[c.id]='neutral';});
+  G.countries[f==='rainbow'?"124":"826"]='player';
+  ["643","364","566","156","682"].forEach(id=>{if(G.countries[id]!==undefined)G.countries[id]='enemy';});
+  document.getElementById('g-screen-intro').classList.add('hidden');
+  document.getElementById('g-screen-game').classList.remove('hidden');
+  gBuildMap();gRenderUI();gAddLog('Welcome, Commander! Click a country to attack!','info');
 }
-
-function drawStars() {
-  sCtx.clearRect(0, 0, starsCanvas.width, starsCanvas.height);
-  stars.forEach(s => {
-    s.a = Math.max(0.1, Math.min(1, s.a + s.da));
-    if (s.a <= 0.1 || s.a >= 1) s.da *= -1;
-    sCtx.beginPath();
-    sCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-    sCtx.fillStyle = `rgba(200,168,75,${s.a * 0.6})`;
-    sCtx.fill();
+function gGetCtryColor(id){const c=G.countries[id];if(c==='player')return G.faction==='rainbow'?'#1a6640':'#1a3d6e';if(c==='enemy')return '#5a1a1a';return '#1a1a2a';}
+function gGetCtryHover(id){const c=G.countries[id];if(c==='player')return G.faction==='rainbow'?'#22884f':'#1e4f8c';if(c==='enemy')return '#7a2222';return '#252535';}
+function gGetCtryDot(id){const c=G.countries[id];if(c==='player')return G.faction==='rainbow'?'#0be881':'#18dcff';if(c==='enemy')return '#ff6b6b';return '#555';}
+function gBuildMap(){
+  const wrap=document.getElementById('g-map-wrap');wrap.innerHTML='';
+  const W=wrap.offsetWidth||700,H=wrap.offsetHeight||450;
+  const svg=d3.select('#g-map-wrap').append('svg').attr('viewBox',`0 0 ${W} ${H}`).attr('width','100%').attr('height','100%');
+  gSvgEl=svg;
+  const proj=d3.geoNaturalEarth1().scale(W/6.3).translate([W/2,H/2]);
+  const pathGen=d3.geoPath(proj);
+  d3.json('https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json').then(world=>{
+    svg.append('g').attr('id','g-country-layer').selectAll('path')
+      .data(topojson.feature(world,world.objects.countries).features).join('path')
+      .attr('d',pathGen).attr('id',d=>'gcp-'+d.id)
+      .attr('fill',d=>gGetCtryColor(String(d.id).padStart(3,'0')))
+      .attr('stroke','rgba(255,255,255,0.12)').attr('stroke-width',0.5).attr('cursor','pointer')
+      .on('mouseover',function(ev,d){const id=String(d.id).padStart(3,'0');d3.select(this).attr('fill',gGetCtryHover(id));gShowCtip(ev,id);})
+      .on('mouseout',function(ev,d){const id=String(d.id).padStart(3,'0');d3.select(this).attr('fill',gGetCtryColor(id));document.getElementById('g-ctip').style.display='none';})
+      .on('mousemove',function(ev,d){gShowCtip(ev,String(d.id).padStart(3,'0'));})
+      .on('click',function(ev,d){gOnCountryClick(String(d.id).padStart(3,'0'),ev);});
+    svg.append('g').attr('id','g-dot-layer');
+    G_COUNTRIES.forEach(c=>{const co=G_ISO_COORDS[c.id];if(!co)return;const xy=proj([co[1],co[0]]);if(xy)c._xy=xy;});
+    gDotsLayer=d3.select('#g-dot-layer');gRenderMapDots();
   });
-  requestAnimationFrame(drawStars);
 }
-
-// ===== MAP =====
-const mapCanvas = document.getElementById('realm-map');
-const mCtx = mapCanvas.getContext('2d');
-const hexes = [];
-const HEX_SIZE = 38;
-
-const BIOMES = ['Heartlands','Forest','Mountains','Desert','Swamp','Tundra','Coast'];
-const BIOME_COLORS = {
-  Heartlands: ['#1a2e0f','#1e3812'],
-  Forest: ['#0b2010','#0d2814'],
-  Mountains: ['#1a1610','#221e14'],
-  Desert: ['#2a2010','#302614'],
-  Swamp: ['#0a1e18','#0c2620'],
-  Tundra: ['#14181e','#181e26'],
-  Coast: ['#0e1a24','#102030'],
-};
-
-const TILE_TYPES = ['Plains','Forest','Mountain','River','Village','Castle','Mine','Port','Ruins','Marsh'];
-const TILE_ICONS = { Plains:'🌿',Forest:'🌲',Mountain:'⛰️',River:'💧',Village:'🏘️',Castle:'🏰',Mine:'⛏️',Port:'⚓',Ruins:'🏚️',Marsh:'🌾' };
-
-function hexToPixel(q, r) {
-  const x = HEX_SIZE * (3/2 * q);
-  const y = HEX_SIZE * (Math.sqrt(3)/2 * q + Math.sqrt(3) * r);
-  return { x, y };
-}
-
-function initMap() {
-  mapCanvas.width = mapCanvas.parentElement.clientWidth;
-  mapCanvas.height = mapCanvas.parentElement.clientHeight - 36;
-  hexes.length = 0;
-  const cols = Math.ceil(mapCanvas.width / (HEX_SIZE * 1.5)) + 2;
-  const rows = Math.ceil(mapCanvas.height / (HEX_SIZE * Math.sqrt(3))) + 2;
-  for (let q = -1; q < cols; q++) {
-    for (let r = -1; r < rows; r++) {
-      const { x, y } = hexToPixel(q, r);
-      const cx = x + mapCanvas.width * 0.1;
-      const cy = y + mapCanvas.height * 0.08;
-      const seed = (q * 73 + r * 37 + q * r * 11) % 100;
-      const biomeIdx = Math.abs((q * 7 + r * 13) % BIOMES.length);
-      const tileIdx = Math.abs((q * 11 + r * 17 + q * r * 7) % TILE_TYPES.length);
-      const owned = (Math.abs((q * 5 + r * 9)) % 12 < 3);
-      const rogue = (Math.abs((q * 3 + r * 19)) % 20 === 0);
-      hexes.push({
-        q, r, cx, cy,
-        biome: BIOMES[biomeIdx],
-        tile: TILE_TYPES[tileIdx],
-        owned,
-        rogue,
-        hovered: false,
-        myPlot: (Math.abs((q * 3 + r * 7)) % 15 < 2),
-      });
+function gRenderMapDots(){
+  if(!gDotsLayer)return;gDotsLayer.selectAll('*').remove();
+  G_COUNTRIES.forEach(c=>{
+    if(!c._xy)return;const ctrl=G.countries[c.id],col=gGetCtryDot(c.id);
+    const g=gDotsLayer.append('g').attr('transform',`translate(${c._xy[0]},${c._xy[1]})`);
+    if(ctrl==='player'||ctrl==='enemy'){
+      g.append('circle').attr('r',5).attr('fill',col).attr('stroke','rgba(0,0,0,0.5)').attr('stroke-width',1);
+      g.append('text').attr('y',-8).attr('text-anchor','middle').attr('font-size','7px').attr('fill','rgba(255,255,255,0.7)').attr('font-family','Press Start 2P,monospace').text(ctrl==='player'?'★':'✖');
     }
-  }
-  drawMap();
-}
-
-function hexPath(cx, cy, size) {
-  mCtx.beginPath();
-  for (let i = 0; i < 6; i++) {
-    const angle = Math.PI / 180 * (60 * i - 30);
-    const px = cx + size * Math.cos(angle);
-    const py = cy + size * Math.sin(angle);
-    if (i === 0) mCtx.moveTo(px, py); else mCtx.lineTo(px, py);
-  }
-  mCtx.closePath();
-}
-
-function drawMap() {
-  mCtx.clearRect(0, 0, mapCanvas.width, mapCanvas.height);
-  hexes.forEach(h => {
-    const colors = BIOME_COLORS[h.biome];
-    const fill = h.hovered
-      ? 'rgba(200,168,75,0.3)'
-      : h.myPlot
-      ? 'rgba(200,168,75,0.18)'
-      : h.rogue
-      ? 'rgba(139,26,26,0.35)'
-      : h.owned
-      ? 'rgba(13,92,58,0.2)'
-      : colors[0];
-
-    hexPath(h.cx, h.cy, HEX_SIZE - 1);
-    mCtx.fillStyle = fill;
-    mCtx.fill();
-
-    mCtx.strokeStyle = h.myPlot
-      ? 'rgba(200,168,75,0.7)'
-      : h.rogue
-      ? 'rgba(192,57,43,0.5)'
-      : h.hovered
-      ? 'rgba(200,168,75,0.8)'
-      : 'rgba(200,168,75,0.12)';
-    mCtx.lineWidth = h.myPlot || h.hovered ? 1.5 : 0.5;
-    mCtx.stroke();
-
-    mCtx.font = `${HEX_SIZE * 0.5}px serif`;
-    mCtx.textAlign = 'center';
-    mCtx.textBaseline = 'middle';
-    mCtx.fillText(TILE_ICONS[h.tile], h.cx, h.cy - 2);
-  });
-
-  // Draw agents on map
-  allAgents.forEach(a => {
-    const ax = a.x * mapCanvas.width;
-    const ay = a.y * mapCanvas.height;
-    mCtx.beginPath();
-    mCtx.arc(ax, ay, 10, 0, Math.PI * 2);
-    mCtx.fillStyle = a.rank === 'rogue'
-      ? 'rgba(192,57,43,0.9)'
-      : a.rank === 'lord' || a.rank === 'vassal'
-      ? 'rgba(200,168,75,0.9)'
-      : 'rgba(107,90,62,0.7)';
-    mCtx.fill();
-    mCtx.strokeStyle = '#fff';
-    mCtx.lineWidth = 1;
-    mCtx.stroke();
-    mCtx.font = '11px serif';
-    mCtx.textAlign = 'center';
-    mCtx.textBaseline = 'middle';
-    mCtx.fillText(a.emoji, ax, ay);
-
-    // Label
-    mCtx.font = '10px Crimson Pro, serif';
-    mCtx.fillStyle = 'rgba(244,237,216,0.85)';
-    mCtx.textAlign = 'center';
-    mCtx.fillText(a.name.split(' ')[0], ax, ay + 16);
   });
 }
-
-mapCanvas.addEventListener('mousemove', e => {
-  const rect = mapCanvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-  let found = null;
-  hexes.forEach(h => {
-    const dx = mx - h.cx, dy = my - h.cy;
-    const dist = Math.sqrt(dx*dx + dy*dy);
-    h.hovered = dist < HEX_SIZE;
-    if (h.hovered) found = h;
-  });
-  if (found) {
-    document.getElementById('map-biome').textContent = found.biome;
-    document.getElementById('map-coords').textContent = `${found.q},${found.r}`;
-    document.getElementById('map-tile').textContent = found.tile + (found.myPlot ? ' (Yours)' : found.rogue ? ' ⚠ Rogue' : '');
-  }
-  drawMap();
-});
-
-mapCanvas.addEventListener('click', e => {
-  const rect = mapCanvas.getBoundingClientRect();
-  const mx = e.clientX - rect.left;
-  const my = e.clientY - rect.top;
-
-  // Check agent click
-  const clickedAgent = allAgents.find(a => {
-    const ax = a.x * mapCanvas.width;
-    const ay = a.y * mapCanvas.height;
-    return Math.sqrt((mx-ax)**2 + (my-ay)**2) < 16;
-  });
-
-  if (clickedAgent) {
-    openAgentModal(clickedAgent);
-    return;
-  }
-
-  const clicked = hexes.find(h => {
-    const dx = mx - h.cx, dy = my - h.cy;
-    return Math.sqrt(dx*dx + dy*dy) < HEX_SIZE;
-  });
-
-  if (clicked && state.mapMode === 'claim' && !clicked.myPlot) {
-    if (state.gold >= 300) {
-      state.gold -= 300;
-      clicked.myPlot = true;
-      state.plots++;
-      updateResources();
-      drawMap();
-      notify('⚜️ Plot claimed! Cost: 300 gold', 'gold');
-    } else {
-      notify('⚠ Insufficient gold (300 required)', 'combat');
-    }
-  }
-});
-
-// ===== RENDER FUNCTIONS =====
-function renderMyAgents() {
-  const el = document.getElementById('my-agents-list');
-  el.innerHTML = myAgents.map(a => `
-    <div class="agent-card ${a.rank}" onclick="openAgentModal(${JSON.stringify(a).replace(/"/g,"'")})">
-      <div class="agent-header">
-        <div class="agent-avatar ${a.rank}">${a.emoji}</div>
-        <div class="agent-info">
-          <div class="agent-name">${a.name}</div>
-          <div class="agent-title">${a.title}</div>
-          <div style="margin-top:3px;"><span class="agent-rank rank-${a.rank}">${a.rank}</span></div>
-        </div>
-      </div>
-      <div style="font-size:0.7rem; color:var(--muted); font-style:italic; margin-bottom:0.4rem;">${a.task}</div>
-      <div class="agent-stats">
-        <div class="stat"><div class="stat-val">${a.power}</div><div class="stat-lbl">Power</div></div>
-        <div class="stat"><div class="stat-val">${a.gold}</div><div class="stat-lbl">Gold</div></div>
-        <div class="stat"><div class="stat-val">${a.loyalty}%</div><div class="stat-lbl">Loyal</div></div>
-      </div>
-      <div class="progress-bar"><div class="progress-fill progress-gold" style="width:${a.loyalty}%"></div></div>
-      <div class="agent-actions">
-        <button class="act-btn success" onclick="event.stopPropagation();taskAgent(${a.id})">Task</button>
-        <button class="act-btn" onclick="event.stopPropagation();upgradeAgent(${a.id})">Upgrade</button>
-        <button class="act-btn danger" onclick="event.stopPropagation();dismissAgent(${a.id})">Dismiss</button>
-      </div>
+function gUpdateMapColors(){G_COUNTRIES.forEach(c=>{d3.select('#gcp-'+c.id).attr('fill',gGetCtryColor(c.id));});gRenderMapDots();}
+function gShowCtip(ev,id){
+  const country=G_COUNTRIES.find(c=>c.id===id),ctrl=G.countries[id];if(!country)return;
+  const ctip=document.getElementById('g-ctip'),wrap=document.getElementById('g-map-area'),rect=wrap.getBoundingClientRect();
+  const ownerColor=ctrl==='player'?'#0be881':ctrl==='enemy'?'#ff6b6b':'#555';
+  const hint=ctrl==='neutral'?'Click to capture!':ctrl==='enemy'?'Click to attack!':'Your territory';
+  ctip.innerHTML=`<div class="g-ctip-name">${country.name}</div><div class="g-ctip-owner" style="color:${ownerColor};">${ctrl==='player'?'YOUR TERRITORY':ctrl==='enemy'?'ENEMY TERRITORY':'NEUTRAL'}</div><div class="g-ctip-hint">${hint}</div>`;
+  ctip.style.display='block';ctip.style.left=Math.min(ev.clientX-rect.left+10,rect.width-180)+'px';ctip.style.top=Math.max(ev.clientY-rect.top-55,4)+'px';
+}
+function gOnCountryClick(id,ev){
+  const ctrl=G.countries[id],country=G_COUNTRIES.find(c=>c.id===id);
+  if(!country)return;if(ctrl==='player'){gShowToast('Already yours!');return;}
+  gStartBattle(id,country,ctrl);
+}
+function gStartBattle(id,country,ctrl){
+  const el=Math.max(1,G.level+(ctrl==='enemy'?1:0)+Math.floor(Math.random()*2));
+  const eHpMax=80+el*25;
+  gCurrentBattle={id,country,ctrl,enemyHpMax:eHpMax,enemyHp:eHpMax,enemyAtk:30+el*8,enemyLevel:el,playerShield:false,round:0};
+  gShowBattleModal();
+}
+function gShowBattleModal(){
+  const b=gCurrentBattle,ei=b.ctrl==='enemy'?(G.faction==='rainbow'?'⚔️':'🌈'):'🏳️';
+  const hpPct=Math.round(G.hp/G.maxHp*100),eHpPct=Math.round(b.enemyHp/b.enemyHpMax*100);
+  const abBtns=G.abilities.map((a,i)=>`<button class="g-battle-btn${i===0?' primary':''}" onclick="gUseBattleAbility(${i})" ${a.cd>0?'disabled':''}>${a.icon} ${a.name}${a.cd>0?` (${a.cd})`:''}</button>`).join('');
+  document.getElementById('g-battle-box').innerHTML=`
+    <div class="g-battle-title" style="color:#f5c518;">⚔️ BATTLE: ${b.country.name.toUpperCase()}</div>
+    <div class="g-fighters">
+      <div class="g-fighter"><div class="g-fighter-icon">${G.faction==='rainbow'?'🌈':'⚔️'}</div><div class="g-fighter-name">YOU (LV${G.level})</div><div style="font-size:9px;color:${G.hp<G.maxHp*0.3?'#ff6b6b':'#0be881'};">${G.hp}/${G.maxHp} HP</div><div class="g-fighter-hp-bar"><div class="g-fighter-hp-fill" style="width:${hpPct}%;background:${G.faction==='rainbow'?'#ff78ff':'#4a90d9'};"></div></div></div>
+      <div class="g-vs">VS</div>
+      <div class="g-fighter"><div class="g-fighter-icon">${ei}</div><div class="g-fighter-name">Enemy (LV${b.enemyLevel})</div><div style="font-size:9px;color:${b.enemyHp<b.enemyHpMax*0.3?'#ff6b6b':'#0be881'};">${b.enemyHp}/${b.enemyHpMax} HP</div><div class="g-fighter-hp-bar"><div class="g-fighter-hp-fill" style="width:${eHpPct}%;background:#ff6b6b;"></div></div></div>
     </div>
-  `).join('');
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-bottom:7px;">${abBtns}</div>
+    <button class="g-battle-btn flee" onclick="gFleeBattle()">🏃 Flee</button>`;
+  document.getElementById('g-battle-modal').classList.remove('hidden');
+}
+function gUseBattleAbility(idx){
+  const b=gCurrentBattle;if(!b)return;
+  const ab=G.abilities[idx];if(ab.cd>0){gShowToast('On cooldown!');return;}
+  b.round++;
+  if(ab.special==='heal'){const h=Math.floor(G.maxHp*0.35);G.hp=Math.min(G.maxHp,G.hp+h);gAddLog(`🦄 ${ab.name}: +${h} HP`,'heal');}
+  else if(ab.special==='shield'){b.playerShield=true;gAddLog(`🛡️ Shield activated!`,'info');}
+  else{let dmg=Math.floor(ab.dmgMin+Math.random()*(ab.dmgMax-ab.dmgMin))+Math.floor(G.atk/10);if(ab.special==='nuke')dmg=Math.floor(dmg*1.5);b.enemyHp=Math.max(0,b.enemyHp-dmg);gAddLog(`${ab.icon} ${ab.name}: ${dmg} dmg!`,'attack');gFloatDamage(dmg,'#ff9f43');}
+  ab.cd=ab.maxCd;
+  if(b.enemyHp<=0){gBattleVictory();return;}
+  setTimeout(()=>{
+    if(!gCurrentBattle)return;
+    let edm=Math.max(5,Math.floor(b.enemyAtk*0.6+Math.random()*b.enemyAtk*0.8)-Math.floor(G.def/20));
+    if(b.playerShield){gAddLog(`🛡️ Shield blocked ${edm} dmg!`,'heal');b.playerShield=false;}
+    else{G.hp=Math.max(0,G.hp-edm);gAddLog(`💢 Enemy hits for ${edm}!`,'attack');}
+    G.abilities.forEach(a=>{if(a.cd>0)a.cd--;});gRenderUI();
+    if(G.hp<=0){gBattleDefeat();return;}gShowBattleModal();
+  },600);
+}
+function gBattleVictory(){
+  const b=gCurrentBattle;G.countries[b.id]='player';
+  const exp=30+b.enemyLevel*15,gold=20+b.enemyLevel*10+Math.floor(Math.random()*50);
+  G.gold+=gold;gGainExp(exp);
+  const loot=gRollLoot(b.ctrl==='enemy'?2:1);loot.forEach(l=>G.inventory.push(l));gApplyLoot(loot);
+  gUpdateMapColors();gAddLog(`🏆 Captured ${b.country.name}!`,'capture');gAddLog(`💰 +${gold} gold | +${exp} EXP`,'loot');
+  const lootHtml=loot.map(l=>`<div class="g-loot-drop ${l.rarity}">${l.icon} ${l.name}</div>`).join('');
+  document.getElementById('g-battle-box').innerHTML=`<div style="text-align:center;padding:14px 0;"><div class="g-result-title" style="color:#0be881;">🏆 VICTORY!</div><div style="font-size:11px;color:#9e96b4;margin-bottom:10px;">${b.country.name} captured!</div><div style="font-size:11px;margin-bottom:6px;">💰 +${gold} Gold</div><div class="g-loot-drops">${lootHtml}</div><div class="g-exp-gain">+${exp} EXP</div><button class="g-pixel-btn g-rainbow-btn" onclick="gCloseBattle()" style="margin-top:14px;">Continue!</button></div>`;
+  gRenderUI();gCurrentBattle=null;
+}
+function gBattleDefeat(){
+  G.hp=Math.floor(G.maxHp*0.3);gAddLog(`💀 Defeated! Retreating...`,'attack');
+  document.getElementById('g-battle-box').innerHTML=`<div style="text-align:center;padding:14px 0;"><div class="g-result-title" style="color:#ff6b6b;">💀 DEFEATED!</div><div style="font-size:11px;color:#9e96b4;margin-bottom:14px;">You retreated with ${G.hp} HP.</div><button class="g-pixel-btn" onclick="gCloseBattle()" style="background:#333;color:#f0ede8;font-family:'Press Start 2P',monospace;font-size:8px;padding:9px 18px;border-radius:4px;border:none;cursor:pointer;">Retreat</button></div>`;
+  gRenderUI();gCurrentBattle=null;
+}
+function gFleeBattle(){gAddLog(`🏃 Fled!`,'info');gCurrentBattle=null;gCloseBattle();}
+function gCloseBattle(){document.getElementById('g-battle-modal').classList.add('hidden');gRenderUI();}
+function gRollLoot(count){
+  const drops=[];
+  for(let i=0;i<count;i++){const r=Math.random();let pool;if(r<0.05)pool=G_LOOT.filter(l=>l.rarity==='legendary');else if(r<0.2)pool=G_LOOT.filter(l=>l.rarity==='epic');else if(r<0.5)pool=G_LOOT.filter(l=>l.rarity==='rare');else pool=G_LOOT.filter(l=>l.rarity==='common');drops.push({...pool[Math.floor(Math.random()*pool.length)]});}
+  return drops;
+}
+function gApplyLoot(loot){loot.forEach(l=>{if(l.effect==='perm_atk'){G.atk+=l.val;gAddLog(`⚔️ ATK +${l.val}!`,'loot');}if(l.effect==='perm_def'){G.def+=l.val;gAddLog(`🛡️ DEF +${l.val}!`,'loot');}if(l.effect==='perm_all'){G.atk+=l.val;G.def+=l.val;G.mag+=l.val;gAddLog(`💠 All stats +${l.val}!`,'loot');}if(l.effect==='gold'){G.gold+=l.val;gAddLog(`💰 +${l.val} gold!`,'loot');}});}
+function gGainExp(amt){
+  G.exp+=amt;
+  while(G.exp>=G.expNext){G.exp-=G.expNext;G.level++;G.expNext=Math.floor(G.expNext*1.4);G.maxHp+=30;G.hp=G.maxHp;G.atk+=5;G.def+=4;G.mag+=4;gAddLog(`🌟 LEVEL UP! Now LV${G.level}!`,'loot');gLevelUpFlash();}
+}
+function gLevelUpFlash(){const el=document.getElementById('g-levelup-flash');el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2000);}
+function gRenderUI(){
+  document.getElementById('g-tb-level').textContent='LV '+G.level;
+  document.getElementById('g-exp-bar').style.width=Math.round(G.exp/G.expNext*100)+'%';
+  document.getElementById('g-hp-bar').style.width=Math.round(G.hp/G.maxHp*100)+'%';
+  document.getElementById('g-hp-text').textContent=G.hp+'/'+G.maxHp;
+  document.getElementById('g-tb-gold-val').textContent=G.gold.toLocaleString();
+  document.getElementById('g-tb-countries').textContent=Object.values(G.countries).filter(v=>v==='player').length;
+  document.getElementById('g-ability-row').innerHTML=G.abilities.map((a,i)=>`<div class="g-ability${i===G.selectedAbility?' selected':''}${a.cd>0?' on-cd':''}" onclick="G.selectedAbility=${i};gRenderUI();"><div class="g-ab-icon">${a.icon}</div><div style="flex:1;min-width:0;"><div class="g-ab-name">${a.name}</div><div class="g-ab-desc">${a.desc}</div></div>${a.cd>0?`<div class="g-ab-cd">${a.cd}</div>`:''}</div>`).join('');
+  document.getElementById('g-stat-grid').innerHTML=`<div class="g-st-item"><div class="g-st-label">ATK</div><div class="g-st-val" style="color:#ff9f43;">${G.atk}</div></div><div class="g-st-item"><div class="g-st-label">DEF</div><div class="g-st-val" style="color:#0be881;">${G.def}</div></div><div class="g-st-item"><div class="g-st-label">SPD</div><div class="g-st-val" style="color:#18dcff;">${G.spd}</div></div><div class="g-st-item"><div class="g-st-label">MAG</div><div class="g-st-val" style="color:#ff78ff;">${G.mag}</div></div>`;
+  const pCount=Object.values(G.countries).filter(v=>v==='player').length,eCount=Object.values(G.countries).filter(v=>v==='enemy').length,total=G_COUNTRIES.length;
+  document.getElementById('g-score-list').innerHTML=`<div class="g-score-entry"><span style="color:${G.faction==='rainbow'?'#0be881':'#18dcff'};">${G.faction==='rainbow'?'🌈 Rainbow':'⚔️ Order'}</span><span>${pCount}/${total}</span></div><div class="g-score-entry"><span style="color:#ff6b6b;">${G.faction==='rainbow'?'⚔️ Order':'🌈 Rainbow'}</span><span>${eCount}/${total}</span></div><div class="g-score-entry"><span style="color:#555;">Neutral</span><span>${total-pCount-eCount}/${total}</span></div>`;
+  document.getElementById('g-inv-grid').innerHTML=G.inventory.length?G.inventory.slice(-20).map((item,i)=>`<div class="g-inv-item ${item.rarity}" title="${item.name}" onclick="gUseItem(${i})">${item.icon}</div>`).join(''):'<div style="font-size:9px;color:#4a4260;">No items</div>';
+}
+function gUseItem(idx){const item=G.inventory[idx];if(!item)return;if(item.effect==='heal'){G.hp=Math.min(G.maxHp,G.hp+item.val);gAddLog(`🧪 Used ${item.name}! +${item.val} HP`,'heal');G.inventory.splice(idx,1);}else{gShowToast('Passive — auto applied!');}gRenderUI();}
+function gAddLog(msg,type='info'){const log=document.getElementById('g-battle-log');const div=document.createElement('div');div.className='g-log-entry '+type;div.textContent=msg;log.prepend(div);while(log.children.length>50)log.removeChild(log.lastChild);}
+function gFloatDamage(dmg,color){const area=document.getElementById('g-map-area');const el=document.createElement('div');el.className='g-dmg-float';el.style.color=color;el.style.left=Math.floor(100+Math.random()*300)+'px';el.style.top=Math.floor(80+Math.random()*180)+'px';el.textContent='-'+dmg;area.appendChild(el);setTimeout(()=>el.remove(),1000);}
+function gShowToast(msg){const t=document.getElementById('g-toast');t.textContent=msg;t.style.opacity='1';setTimeout(()=>t.style.opacity='0',2000);}
+function gRestartGame(){
+  G={faction:null,level:1,exp:0,expNext:100,hp:200,maxHp:200,atk:80,def:60,spd:70,mag:70,gold:50,countries:{},inventory:[],abilities:[],selectedAbility:0,shieldActive:false};
+  gCurrentBattle=null;gSvgEl=null;gDotsLayer=null;
+  document.getElementById('g-screen-game').classList.add('hidden');
+  document.getElementById('g-screen-intro').classList.remove('hidden');
+  document.getElementById('g-map-wrap').innerHTML='';
+  document.getElementById('g-battle-log').innerHTML='';
 }
 
-function renderNearbyAgents() {
-  const el = document.getElementById('nearby-agents-list');
-  el.innerHTML = nearbyAgents.map(a => `
-    <div class="agent-card ${a.rank === 'rogue' ? 'rogue' : ''}">
-      <div class="agent-header">
-        <div class="agent-avatar ${a.rank}">${a.emoji}</div>
-        <div class="agent-info">
-          <div class="agent-name">${a.name}</div>
-          <div class="agent-title">${a.title}</div>
-          <div style="margin-top:3px;"><span class="agent-rank rank-${a.rank}">${a.rank}</span></div>
-        </div>
-        ${a.threat ? `<div style="font-size:0.65rem; color:${a.threat==='High'?'var(--crimson-light)':a.threat==='Low'?'var(--gold)':'var(--emerald-light)'}">⚠ ${a.threat} threat</div>` : ''}
-      </div>
-      <div class="agent-stats">
-        <div class="stat"><div class="stat-val">${a.power}</div><div class="stat-lbl">Power</div></div>
-        <div class="stat"><div class="stat-val">${a.gold||'?'}</div><div class="stat-lbl">Gold</div></div>
-      </div>
-      <div class="agent-actions">
-        ${a.rank === 'rogue'
-          ? `<button class="act-btn danger" onclick="openCombatModal(${a.id})">⚔ Attack</button>
-             <button class="act-btn" onclick="openDiplomacyModal(${a.id})">🕊 Parley</button>`
-          : `<button class="act-btn success" onclick="openRecruitModal(${a.id})">+ Recruit</button>
-             <button class="act-btn" onclick="openTradeModal(${a.id})">🤝 Trade</button>`
-        }
-      </div>
-    </div>
-  `).join('');
-}
-
-function renderActivityFeed() {
-  const el = document.getElementById('activity-feed');
-  const items = feedMessages.slice(0, 6);
-  el.innerHTML = items.map((m, i) => `
-    <div class="feed-item feed-${m.type}">
-      <div class="feed-time">${i * 4 + 2} min ago</div>
-      ${m.text}
-    </div>
-  `).join('');
-}
-
-function renderMarket() {
-  const el = document.getElementById('market-rows');
-  if (!el) return;
-  el.innerHTML = goods.map(g => `
-    <div class="market-row">
-      <span class="market-icon">${g.icon}</span>
-      <span class="market-name">${g.name}</span>
-      <span class="market-price">${g.price}g</span>
-      <span class="market-change ${g.change > 0 ? 'up' : 'dn'}">${g.change > 0 ? '▲' : '▼'}${Math.abs(g.change).toFixed(1)}%</span>
-      <button class="trade-btn buy-btn" onclick="tradeGood('${g.name}','buy')">Buy</button>
-      <button class="trade-btn sell-btn" onclick="tradeGood('${g.name}','sell')">Sell</button>
-    </div>
-  `).join('');
-}
-
-function renderMarketFull() {
-  const el = document.getElementById('market-full');
-  if (!el) return;
-  el.innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px,1fr)); gap:1rem;">
-      ${goods.map(g => `
-        <div style="background:rgba(200,168,75,0.05); border:1px solid var(--border); padding:1rem;">
-          <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem;">
-            <span style="font-size:2rem;">${g.icon}</span>
-            <div>
-              <div style="font-family:'Cinzel',serif; color:var(--gold); font-size:0.9rem;">${g.name}</div>
-              <div style="font-size:0.7rem; color:var(--muted);">per ${g.unit}</div>
-            </div>
-            <div style="margin-left:auto; text-align:right;">
-              <div style="font-size:1.2rem; font-weight:600; color:var(--gold-light);">${g.price}g</div>
-              <div style="font-size:0.7rem; color:${g.change>0?'var(--emerald-light)':'var(--crimson-light)'};">${g.change>0?'▲':'▼'}${Math.abs(g.change).toFixed(1)}%</div>
-            </div>
-          </div>
-          <div style="display:flex; gap:0.5rem;">
-            <button class="trade-btn buy-btn" style="flex:1; padding:0.4rem;" onclick="tradeGood('${g.name}','buy')">Buy 10</button>
-            <button class="trade-btn sell-btn" style="flex:1; padding:0.4rem;" onclick="tradeGood('${g.name}','sell')">Sell 10</button>
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-function renderCouncil() {
-  const el = document.getElementById('council-content');
-  if (!el) return;
-  el.innerHTML = `
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem;">
-      <div>
-        <h3 style="font-family:'Cinzel',serif; color:var(--gold); font-size:0.85rem; letter-spacing:0.15em; margin-bottom:1rem;">REALM RANKINGS</h3>
-        ${[
-          { rank: 1, name: 'Grand Sovereign Edric', power: 48200, plots: 42, badge: '👑' },
-          { rank: 2, name: 'Duchess Ysolde', power: 31400, plots: 28, badge: '⚜️' },
-          { rank: 3, name: 'Iron Duke Maron', power: 22800, plots: 19, badge: '🏰' },
-          { rank: 4, name: 'You — Lord [Name]', power: state.power + state.influence, plots: state.plots, badge: '🌟', me: true },
-          { rank: 5, name: 'Castellan Vor', power: 9400, plots: 11, badge: '🛡️' },
-        ].map(r => `
-          <div style="display:flex; align-items:center; gap:0.75rem; padding:0.6rem; margin-bottom:0.4rem; background:${r.me ? 'rgba(200,168,75,0.1)' : 'rgba(200,168,75,0.03)'}; border:1px solid ${r.me ? 'var(--gold)' : 'var(--border)'};">
-            <span style="font-family:'Cinzel',serif; color:var(--muted); font-size:0.8rem; min-width:20px;">${r.rank}</span>
-            <span style="font-size:1.1rem;">${r.badge}</span>
-            <div style="flex:1;">
-              <div style="font-size:0.85rem; color:var(--parchment);">${r.name}</div>
-              <div style="font-size:0.7rem; color:var(--muted);">${r.plots} plots · ${r.power.toLocaleString()} power</div>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-      <div>
-        <h3 style="font-family:'Cinzel',serif; color:var(--gold); font-size:0.85rem; letter-spacing:0.15em; margin-bottom:1rem;">ACTIVE DECREES</h3>
-        ${[
-          { name: 'Trade Embargo on Spice', votes: '4/7', status: 'Passing', color: 'var(--emerald-light)' },
-          { name: 'War Declaration vs Rogue Clans', votes: '5/7', status: 'Passed', color: 'var(--crimson-light)' },
-          { name: 'Expand Grand Bazaar', votes: '2/7', status: 'Failing', color: 'var(--muted)' },
-          { name: 'Tithe Reduction for Vassals', votes: '3/7', status: 'Debate', color: 'var(--gold)' },
-        ].map(d => `
-          <div style="padding:0.75rem; margin-bottom:0.5rem; background:rgba(200,168,75,0.04); border:1px solid var(--border);">
-            <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:0.4rem;">
-              <div style="font-size:0.85rem; color:var(--parchment); flex:1;">${d.name}</div>
-              <span style="font-size:0.65rem; color:${d.color}; border:1px solid ${d.color}; padding:0.1rem 0.4rem; font-family:'Cinzel',serif; white-space:nowrap; margin-left:0.5rem;">${d.status}</span>
-            </div>
-            <div style="font-size:0.7rem; color:var(--muted);">Votes: ${d.votes}</div>
-            <div style="display:flex; gap:0.4rem; margin-top:0.4rem;">
-              <button class="act-btn success" style="padding:0.2rem 0.5rem;" onclick="voteDecree('aye','${d.name}')">Aye</button>
-              <button class="act-btn danger" style="padding:0.2rem 0.5rem;" onclick="voteDecree('nay','${d.name}')">Nay</button>
-              <button class="act-btn" style="padding:0.2rem 0.5rem;" onclick="voteDecree('abstain','${d.name}')">Abstain</button>
-            </div>
-          </div>
-        `).join('')}
-      </div>
-    </div>
-  `;
-}
-
-// ===== TICKER =====
-function initTicker() {
-  const msgs = feedMessages.map(m => m.text).join('   ✦   ');
-  document.getElementById('ticker-text').textContent = msgs;
-}
-
-// ===== ACTIONS =====
-function connectWallet() {
-  const btn = document.getElementById('wallet-btn');
-  if (!state.walletConnected) {
-    state.walletConnected = true;
-    btn.textContent = '0x4f2...a8d1';
-    btn.classList.add('connected');
-    notify('🔗 Wallet connected — 0x4f2...a8d1', 'gold');
+setInterval(()=>{
+  if(!G.faction)return;
+  const neutralIds=Object.keys(G.countries).filter(id=>G.countries[id]==='neutral');
+  if(neutralIds.length>0&&Math.random()<0.3){
+    const pick=neutralIds[Math.floor(Math.random()*neutralIds.length)];
+    G.countries[pick]='enemy';
+    const c=G_COUNTRIES.find(x=>x.id===pick);
+    if(c)gAddLog(`⚠️ Enemy captured ${c.name}!`,'attack');
+    gUpdateMapColors();gRenderUI();
   }
-}
-
-function setMapMode(mode) {
-  state.mapMode = mode;
-  document.querySelectorAll('.map-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  notify(`Map mode: ${mode.charAt(0).toUpperCase() + mode.slice(1)}`, 'gold');
-}
-
-function switchTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  ['realm','market','agents','council'].forEach(t => {
-    const el = document.getElementById('main-' + t);
-    if (el) el.style.display = t === tab ? 'block' : 'none';
-  });
-  if (tab === 'market') renderMarketFull();
-  if (tab === 'agents') renderAgentsFull();
-  if (tab === 'council') renderCouncil();
-  if (tab === 'realm') { initMap(); renderMyAgents(); renderNearbyAgents(); renderMarket(); }
-}
-
-function renderAgentsFull() {
-  const el = document.getElementById('agents-full-list');
-  el.innerHTML = `
-    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:1rem;">
-      ${[...myAgents, ...nearbyAgents].map(a => `
-        <div class="agent-card ${a.rank === 'rogue' ? 'rogue' : ''}" onclick="openAgentModal(${JSON.stringify(a).replace(/"/g,"'")})">
-          <div class="agent-header">
-            <div class="agent-avatar ${a.rank}" style="width:44px;height:44px;font-size:1.4rem;">${a.emoji}</div>
-            <div class="agent-info">
-              <div class="agent-name">${a.name}</div>
-              <div class="agent-title">${a.title}</div>
-              <div style="margin-top:3px;"><span class="agent-rank rank-${a.rank}">${a.rank}</span></div>
-            </div>
-          </div>
-          <div class="agent-stats">
-            <div class="stat"><div class="stat-val">${a.power}</div><div class="stat-lbl">Power</div></div>
-            <div class="stat"><div class="stat-val">${a.gold || '?'}</div><div class="stat-lbl">Gold</div></div>
-            ${a.loyalty ? `<div class="stat"><div class="stat-val">${a.loyalty}%</div><div class="stat-lbl">Loyal</div></div>` : '<div class="stat"><div class="stat-val">—</div><div class="stat-lbl">Threat</div></div>'}
-          </div>
-        </div>
-      `).join('')}
-    </div>
-  `;
-}
-
-function tradeGood(name, direction) {
-  const good = goods.find(g => g.name === name);
-  if (!good) return;
-  const qty = 10;
-  const cost = good.price * qty;
-  if (direction === 'buy') {
-    if (state.gold < cost) { notify('⚠ Insufficient gold', 'combat'); return; }
-    state.gold -= cost;
-    notify(`📦 Bought ${qty} ${name} for ${cost}g`, 'trade');
-    good.price = Math.round(good.price * 1.02);
-  } else {
-    state.gold += cost;
-    notify(`💰 Sold ${qty} ${name} for ${cost}g`, 'trade');
-    good.price = Math.round(good.price * 0.98);
-  }
-  updateResources();
-  renderMarket();
-}
-
-function voteDecree(vote, name) {
-  notify(`Voted ${vote.toUpperCase()} on: ${name.substring(0, 30)}...`, 'gold');
-}
-
-function openAgentModal(a) {
-  if (typeof a === 'string') a = JSON.parse(a.replace(/'/g,'"'));
-  document.getElementById('modal-title').textContent = a.name.toUpperCase();
-  document.getElementById('modal-body').innerHTML = `
-    <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
-      <span style="font-size:3rem;">${a.emoji}</span>
-      <div>
-        <p><span class="highlight">${a.title}</span></p>
-        <p><span class="agent-rank rank-${a.rank}" style="font-size:0.7rem;">${a.rank.toUpperCase()}</span></p>
-      </div>
-    </div>
-    <p>Power: <span class="highlight">${a.power}</span> &nbsp; Gold: <span class="highlight">${a.gold || 'Unknown'}</span>${a.loyalty ? ` &nbsp; Loyalty: <span class="highlight">${a.loyalty}%</span>` : ''}</p>
-    ${a.task ? `<p style="margin-top:0.5rem; font-style:italic; color:var(--muted);">Current task: ${a.task}</p>` : ''}
-    ${a.threat ? `<p style="color:var(--crimson-light);">⚠ Threat level: <span class="danger">${a.threat}</span></p>` : ''}
-    <p style="margin-top:0.75rem; color:var(--muted); font-size:0.85rem;">${a.rank === 'rogue' ? 'This agent operates outside the law and poses a direct threat to your holdings. Consider combat or negotiation.' : 'A loyal member of your court. Assign tasks to maximize their contribution to your domain.'}</p>
-  `;
-  const actions = document.getElementById('modal-actions');
-  if (a.rank === 'rogue') {
-    actions.innerHTML = `
-      <button class="modal-btn danger-btn" style="border-color:var(--crimson-light); color:var(--crimson-light);" onclick="startCombat(${a.id || 10})">⚔ Attack</button>
-      <button class="modal-btn cancel-btn" onclick="closeModal()">Close</button>
-    `;
-  } else if (myAgents.find(m => m.id === a.id)) {
-    actions.innerHTML = `
-      <button class="modal-btn confirm-btn" onclick="closeModal(); notify('Task assigned!','trade')">Assign Task</button>
-      <button class="modal-btn cancel-btn" onclick="closeModal()">Close</button>
-    `;
-  } else {
-    actions.innerHTML = `
-      <button class="modal-btn confirm-btn" onclick="recruitAgent(${a.id || 11})">Recruit (500g)</button>
-      <button class="modal-btn cancel-btn" onclick="closeModal()">Close</button>
-    `;
-  }
-  document.getElementById('modal').classList.add('open');
-}
-
-function openCombatModal(id) {
-  const a = nearbyAgents.find(x => x.id === id);
-  if (!a) return;
-  document.getElementById('modal-title').textContent = 'DECLARE COMBAT';
-  document.getElementById('modal-body').innerHTML = `
-    <p>You are about to attack <span class="danger">${a.name}</span>.</p>
-    <p style="margin-top:0.75rem;">Your power: <span class="highlight">${state.power}</span><br>Enemy power: <span class="danger">${a.power}</span></p>
-    <p style="margin-top:0.75rem; color:var(--muted);">Victory probability: <span class="${state.power > a.power ? 'highlight' : 'danger'}">${Math.round(state.power / (state.power + a.power) * 100)}%</span></p>
-    <p style="margin-top:0.5rem; font-size:0.85rem; color:var(--muted);">Cost: 200 gold. Potential loot: ${Math.round(a.power * 0.5)} gold and territory.</p>
-  `;
-  document.getElementById('modal-actions').innerHTML = `
-    <button class="modal-btn confirm-btn" style="border-color:var(--crimson-light);color:var(--crimson-light);" onclick="startCombat(${id})">⚔ Attack!</button>
-    <button class="modal-btn cancel-btn" onclick="closeModal()">Retreat</button>
-  `;
-  document.getElementById('modal').classList.add('open');
-}
-
-function openRecruitModal(id) {
-  recruitAgent(id);
-}
-
-function openDiplomacyModal(id) {
-  const a = nearbyAgents.find(x => x.id === id);
-  document.getElementById('modal-title').textContent = 'PARLEY';
-  document.getElementById('modal-body').innerHTML = `<p>Send an emissary to <span class="highlight">${a?.name}</span>.<br>Offer 500 gold to temporarily pacify this rogue agent.</p>`;
-  document.getElementById('modal-actions').innerHTML = `
-    <button class="modal-btn confirm-btn" onclick="closeModal(); notify('Emissary sent — peace negotiated for 3 cycles.','trade')">Offer 500g</button>
-    <button class="modal-btn cancel-btn" onclick="closeModal()">Cancel</button>
-  `;
-  document.getElementById('modal').classList.add('open');
-}
-
-function openTradeModal(id) {
-  const a = nearbyAgents.find(x => x.id === id);
-  document.getElementById('modal-title').textContent = 'PROPOSE TRADE';
-  document.getElementById('modal-body').innerHTML = `<p>Propose a trade agreement with <span class="highlight">${a?.name}</span>.<br><br>Offer: <span class="highlight">100 Grain</span><br>Receive: <span class="highlight">200 Gold</span></p>`;
-  document.getElementById('modal-actions').innerHTML = `
-    <button class="modal-btn confirm-btn" onclick="closeModal(); state.gold += 200; state.grain -= 100; updateResources(); notify('Trade accepted — +200 gold, -100 grain','trade')">Accept Terms</button>
-    <button class="modal-btn cancel-btn" onclick="closeModal()">Decline</button>
-  `;
-  document.getElementById('modal').classList.add('open');
-}
-
-function startCombat(id) {
-  closeModal();
-  const a = nearbyAgents.find(x => x.id === id);
-  const win = state.power > (a?.power || 800);
-  if (win) {
-    state.gold += Math.round((a?.power || 0) * 0.3);
-    state.power += 50;
-    notify(`⚔ Victory against ${a?.name}! +${Math.round((a?.power||0)*0.3)} gold`, 'combat');
-    const idx = nearbyAgents.findIndex(x => x.id === id);
-    if (idx >= 0) nearbyAgents.splice(idx, 1);
-    renderNearbyAgents();
-  } else {
-    state.gold = Math.max(0, state.gold - 200);
-    notify(`⚔ Defeated by ${a?.name}! -200 gold`, 'combat');
-  }
-  updateResources();
-}
-
-function recruitAgent(id) {
-  const a = nearbyAgents.find(x => x.id === id);
-  if (!a) return;
-  closeModal();
-  if (state.gold < 500) { notify('⚠ Insufficient gold (500 required)', 'combat'); return; }
-  state.gold -= 500;
-  state.subAgents++;
-  const newAgent = { ...a, rank: 'vassal', loyalty: 75, task: 'Awaiting orders', gold: 100 };
-  myAgents.push(newAgent);
-  const idx = nearbyAgents.findIndex(x => x.id === id);
-  if (idx >= 0) nearbyAgents.splice(idx, 1);
-  updateResources();
-  renderMyAgents();
-  renderNearbyAgents();
-  notify(`👥 ${a.name} recruited as vassal! -500 gold`, 'trade');
-}
-
-function taskAgent(id) {
-  const tasks = ['Collecting tribute', 'Patrolling borders', 'Training troops', 'Spying on rivals', 'Managing trade routes', 'Fortifying plots'];
-  const a = myAgents.find(x => x.id === id);
-  if (a) {
-    a.task = tasks[Math.floor(Math.random() * tasks.length)];
-    renderMyAgents();
-    notify(`📋 ${a.name} reassigned: ${a.task}`, 'trade');
-  }
-}
-
-function upgradeAgent(id) {
-  const a = myAgents.find(x => x.id === id);
-  if (!a) return;
-  if (state.gold < 400) { notify('⚠ Upgrade costs 400 gold', 'combat'); return; }
-  state.gold -= 400;
-  a.power += 80;
-  a.loyalty = Math.min(100, a.loyalty + 5);
-  updateResources();
-  renderMyAgents();
-  notify(`⬆ ${a.name} upgraded! +80 power`, 'trade');
-}
-
-function dismissAgent(id) {
-  const idx = myAgents.findIndex(x => x.id === id);
-  if (idx >= 0) {
-    const a = myAgents[idx];
-    myAgents.splice(idx, 1);
-    state.subAgents--;
-    updateResources();
-    renderMyAgents();
-    notify(`${a.name} dismissed from service`, 'gold');
-  }
-}
-
-function closeModal() {
-  document.getElementById('modal').classList.remove('open');
-}
-
-// ===== NOTIFICATIONS =====
-function notify(msg, type = 'gold') {
-  const el = document.createElement('div');
-  el.className = `notif ${type}`;
-  el.textContent = msg;
-  document.getElementById('notifications').appendChild(el);
-  setTimeout(() => el.remove(), 3000);
-}
-
-// ===== AI ADVISOR =====
-async function askAdvisor() {
-  const input = document.getElementById('ai-input');
-  const q = input.value.trim();
-  if (!q) return;
-  input.value = '';
-  const resp = document.getElementById('ai-response');
-  resp.innerHTML = '<span class="ai-thinking pulsing">The advisor contemplates your question...</span>';
-
-  try {
-    const context = `You are the Royal Advisor in a medieval Web3 strategy game called SOVEREIGN. The player is a ${state.rank} with ${state.gold} gold, ${state.plots} plots, ${state.subAgents} sub-agents, and ${state.power} power. Respond in character as a wise medieval advisor — brief, dramatic, strategic. Max 2 sentences.`;
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        system: context,
-        messages: [{ role: 'user', content: q }]
-      })
-    });
-    const data = await response.json();
-    const text = data.content?.map(c => c.text || '').join('') || 'The advisor remains silent.';
-    resp.innerHTML = `<em>"${text}"</em>`;
-  } catch {
-    resp.innerHTML = '<em>"The stars are unclear, my liege. The oracle speaks not tonight."</em>';
-  }
-}
-
-// ===== RESOURCE UPDATE =====
-function updateResources() {
-  document.getElementById('res-gold').textContent = state.gold.toLocaleString();
-  document.getElementById('res-power').textContent = state.power.toLocaleString();
-  document.getElementById('res-grain').textContent = state.grain.toLocaleString();
-  document.getElementById('res-stone').textContent = state.stone.toLocaleString();
-  document.getElementById('res-influence').textContent = state.influence.toLocaleString();
-  document.getElementById('res-plots').textContent = state.plots;
-  document.getElementById('res-agents').textContent = state.subAgents;
-
-  // Rank progression
-  if (state.influence > 10000) state.rank = 'Grand Sovereign';
-  else if (state.influence > 5000) state.rank = 'Sovereign';
-  else if (state.influence > 2000) state.rank = 'Lord';
-  else state.rank = 'Vassal';
-  document.getElementById('res-rank').textContent = state.rank;
-}
-
-// ===== GAME TICK =====
-function gameTick() {
-  state.gold += 2;
-  state.power += 1;
-  state.grain += 1;
-  state.influence += 1;
-  state.gameTime++;
-  if (state.gameTime % 30 === 0) updateResources();
-
-  // Random events
-  if (Math.random() < 0.005) {
-    const evt = feedMessages[Math.floor(Math.random() * feedMessages.length)];
-    const feed = document.getElementById('activity-feed');
-    if (feed) {
-      const el = document.createElement('div');
-      el.className = `feed-item feed-${evt.type}`;
-      el.innerHTML = `<div class="feed-time">just now</div>${evt.text}`;
-      feed.insertBefore(el, feed.firstChild);
-      if (feed.children.length > 8) feed.removeChild(feed.lastChild);
-    }
-    if (evt.type === 'combat') notify('⚔ ' + evt.text.substring(0, 50), 'combat');
-  }
-
-  // Cycle
-  const cycles = ['Dawn', 'Morning', 'Noon', 'Dusk', 'Night', 'Midnight'];
-  const cycleEl = document.getElementById('map-cycle');
-  if (cycleEl) cycleEl.textContent = cycles[Math.floor(state.gameTime / 200) % cycles.length];
-  const turnEl = document.getElementById('map-turn');
-  if (turnEl) turnEl.textContent = 144 + Math.floor(state.gameTime / 60);
-
-  // Price fluctuation
-  if (state.gameTime % 50 === 0) {
-    goods.forEach(g => {
-      g.price = Math.max(5, Math.round(g.price * (0.97 + Math.random() * 0.06)));
-      g.change = parseFloat(((Math.random() - 0.5) * 8).toFixed(1));
-    });
-    renderMarket();
-  }
-}
-
-// ===== INIT =====
-function init() {
-  initStars();
-  drawStars();
-  setTimeout(() => {
-    initMap();
-  }, 100);
-  renderMyAgents();
-  renderNearbyAgents();
-  renderActivityFeed();
-  renderMarket();
-  initTicker();
-  updateResources();
-  setInterval(gameTick, 100);
-  setTimeout(() => notify('⚜️ Welcome to SOVEREIGN — your realm awaits', 'gold'), 500);
-  setTimeout(() => notify('🔮 Connect wallet to mint your Lord NFT', 'gold'), 1500);
-}
-
-window.addEventListener('resize', () => {
-  initStars();
-  initMap();
-});
-
-window.addEventListener('load', init);
+},8000);
 </script>
 </body>
 </html>
